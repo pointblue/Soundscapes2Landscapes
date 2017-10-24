@@ -15,9 +15,22 @@ library(unmarked)
 pth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Classifications/"
 dat<-try(readWorksheetFromFile(paste(pth,"WEME_classifications.xlsx",sep=""),sheet="WEME_04"))
 dat<-dat[,-1]
-dat$event<-paste(dat$year,dat$month,ifelse(dat$day<10,paste("0",dat$day,sep=""),dat$day),"::",
-		ifelse(dat$hour<10,paste("0",dat$hour,sep=""),dat$hour),":",ifelse(dat$minute<10,paste("0",dat$minute,sep=""),dat$minute),sep="")
 
-obs<-reshape(dat[,c("presence","site","event")],idvar="site",timevar="event",direction="wide")
+ddat<-aggregate(as.formula("presence~site+year+month+day"),data=dat,FUN=max)
+ndat<-aggregate(as.formula("presence~site+year+month+day"),data=dat,FUN=NROW);names(ndat)<-c("site","year","month","day","nrec")
+tdf<-merge(ddat,ndat,by=c("site","year","month","day"))
 
+tdf$date<-paste(tdf$year,tdf$month,ifelse(tdf$day<10,paste("0",tdf$day,sep=""),tdf$day),sep="")
+#generate events by site
+data<-data.frame()
+for(ss in unique(tdf$site)){
+	sdat<-subset(tdf,site==ss)
+	sdat<-sdat[order(sdat$date),]
+	sdat$event<-1:nrow(sdat)
+	data<-rbind(data,sdat)
+}
+
+obs<-reshape(data[,c("presence","site","event")],idvar="site",timevar="event",direction="wide")
+nrecs<-reshape(data[,c("nrec","site","event")],idvar="site",timevar="event",direction="wide")
+months<-reshape(data[,c("month","site","event")],idvar="site",timevar="event",direction="wide")
 #Way too many events per site. What to do? Ask Marconi...
