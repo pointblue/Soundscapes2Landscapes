@@ -4,19 +4,17 @@
 ###############################################################################
 
 
-library(googlesheets)
+#library(googlesheets)
 #register a googlesheet
-gdat<-gs_url("https://docs.google.com/spreadsheets/d/1PBktjnO1whUUEWYdUUv-a80SaKR7WOg3S91iIc3kYS8/edit?usp=sharing")
+#gdat<-gs_url("https://docs.google.com/spreadsheets/d/1PBktjnO1whUUEWYdUUv-a80SaKR7WOg3S91iIc3kYS8/edit?usp=sharing")
 #read its contents
-gs_read(gdat)
+#gs_read(gdat)
 
 #################################################################################
 # Dependencies
-library(unmarked)
-library(raster)
-library(rgdal)
-library(sp)
-library(rgeos)
+libs<-c("raster","rgdal","sp","rgeos","unmarked")
+lapply(libs, require, character.only = TRUE)
+
 
 lcpth<-"V:/Data/vegetation/SonomaCountyVegHabitat"
 dsn<-"Sonoma_Veg_Map_5_1"
@@ -79,10 +77,70 @@ ocovs<-list(
 		ndawn=alldata[,paste("ndawn",1:5,sep=":")]
 )
 
-udf<-unmarkedFrameOccu(y=y,siteCovs=scov, obsCovs=ocovs)  #det.dat
+udf<-unmarkedFrameOccuFP(y=y,siteCovs=scov, obsCovs=ocovs,type=c(0,5,0))  #det.dat
+df<-cbind(scov,y)
+df$max<-apply(df[,c(2:6)],1,max,na.rm=T)
+df$sum<-apply(df[,c(2:6)],1,sum,na.rm=T)
+df$nev<-apply(df[,c(2:6)],1,FUN=function(x){y<-sum(!is.na(x));return(y)})
+df$presence<-df$sum/df$nev
 
-mdl<-occu(formula=as.formula("~nrecs+months+ndawn ~1"),data=udf)
-summary(mdl)
+#estimate prevalence
+prev<-numeric()
+for (ss in unique(dat$site)){
+	tdf<-subset(dat,site==ss)
+	nr<-nrow(tdf);nc<-sum(tdf$presence)
+	prev<-c(prev,nc/nr)
+}
+mean(prev)
+
+mdl1<-occuFP(detformula=as.formula("~as.factor(months)+ndawn"), FPformula=as.formula("~nrecs"), data=udf);summary(mdl1)
+#mdl2<-occuFP(detformula=as.formula("~as.factor(months)+ndawn+I(ndawn^2)"), FPformula=as.formula("~nrecs"), data=udf);summary(mdl2)
+#mdl3<-occuFP(detformula=as.formula("~as.factor(months)+ndawn"), FPformula=as.formula("~nrecs+I(nrecs^2)"), data=udf);summary(mdl3)
+#mdl4<-occuFP(detformula=as.formula("~as.factor(months)+ndawn+I(ndawn^2)"), FPformula=as.formula("~nrecs+I(nrecs^2)"), data=udf);summary(mdl4)
+#mdl1 is best
+#mdl1a<-occuFP(detformula=as.formula("~as.factor(months)+ndawn+nrecs"), data=udf);summary(mdl1a)
+#mdl1b<-occuFP(detformula=as.formula("~as.factor(months)+nrecs"), FPformula=as.formula("~ndawn"), data=udf);summary(mdl1b)
+#mdl1c<-occuFP(detformula=as.formula("~as.factor(months)+ndawn+nrecs"), FPformula=as.formula("~nrecs+ndawn"), data=udf);summary(mdl1c)	#possibly competing
+#mdl1 still best - different iterations of the below did not work
+#mdl1d<-occuFP(detformula=as.formula("~ndawn+nrecs"), FPformula=as.formula("~as.factor(months)"), data=udf);summary(mdl1d)
+#try monthly slopes...
+#mdl1e<-occuFP(detformula=as.formula("~as.factor(months)*ndawn"), FPformula=as.formula("~nrecs"), data=udf);summary(mdl1e)
+#mdl1 rules!!
+
+##predict to month=5, and the mean ndawn and nrecs per site - TEST
+cvals<-coef(mdl1)
+#to predict:
+#estimate occu as est.occu * (1-FP) and pdet is not needed because the coefficient for PSI is already corrected for pdet
+#est.occu: psi 
+estOc<-exp(cvals[1])/(1+exp(cvals[1])) 
+#FP = (intpf+ mean(nrecs)*cFP)
+lgfp<-(cvals[7] + (110*cvals[8]))
+fp<-exp(lgfp)/(1+exp(lgfp))
+nfp<-1-fp
+op<-estOc * nfp 
+
+#vectorizing
+dfcovs<-alldata[,c(1,7:11)]
+dfcovs$mean_nrecs<-apply(dfcovs[,c(2:6)],1,mean,na.rm=T)
+dfcovs$lgfp<-cvals[7] + (dfcovs$mean_nrecs*cvals[8])
+dfcovs$fp<-exp(dfcovs$lgfp)/(1+exp(dfcovs$lgfp))
+dfcovs$est<-estOc*(1-dfcovs$fp)
+dfcovs$lgt_est<-log(dfcovs$est)/(1-log(dfcovs$est))
+
+results<-dfcovs[,c("site","fp","est","lgt_est")]
+#Need to change the guid of 9 sites
+results$site<-ifelse(results$site=="s2l01_170509_028390028_1432","s2l01_170509_028390028_1423",
+		ifelse(results$site=="s2l03_170415_028150053_1423","s2l03_170415_028150053_1432",
+			ifelse(results$site=="s2l03_170527_028320008_500","s2l03_170527_028380008_500",
+				ifelse(results$site=="s2l06_170527_028320008_1300","s2l06_170527_028380008_1300",
+					ifelse(results$site=="s2l07_170401_Pepperwood_1700","s2l07_170401_pepperwood_1700",
+						ifelse(results$site=="s2l10_170620_060060059_2300","s2l01_170620_060060059_2300",results$site))))))
+
+results<-merge(results,geo,by="site",all.x=T)
+save(results,file=paste(pth,"testResults.RData",sep=""))
+
+########################################################
+##The below does not work for occuFP
 re<-ranef(mdl)
 preds<-bup(re,"mean")
 
