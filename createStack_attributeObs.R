@@ -30,7 +30,7 @@ snapToGrid<-function(inprast,baserast){
 	return(inprast)
 }
 
-# vif_est selects covariates based on variance inflation - outputs the most informative set
+# vif_func selects covariates based on variance inflation - outputs the most informative set
 # in_frame is the input data.frame
 # thresh is the threshold of the VIF, defaulting to a reasonable value (10)
 # trace indicates if we want to print each iteration
@@ -102,7 +102,7 @@ gpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Geodata/"
 dpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Classifications/"
 
 ## metadata
-rastlist<-read.csv(paste(gpth,"covariatesListS2L.csv",sep=""))
+rastlist<-read.csv(paste(gpth,"covariatesListS2L_171114.csv",sep=""))
 rastlist$CovariateFile<-gsub("\\\\","/",rastlist$CovariateFile)
 
 ###################   processing...
@@ -124,7 +124,26 @@ for(ff in rastlist$CovariateFile){
 ## We have more covariates than we have data, so, let's use a sample of 1000 cells from the stack for the VIF selection
 ## estimate Variance Inflation Factor and subset the covariates to most informative subset
 covardf<-as.data.frame(covarstack)
-in_frame<-covardf[sample(1:nrow(covardf),20000),]	#about 6% of all cells
+### Inspect!
+lapply(names(covardf),FUN=function(x,covardf)summary(covardf[,x]),covardf)
+
+#Happy with all currently there, so
+covarstack<-stack()
+for(ff in rastlist$CovariateFile){
+	trast<-raster(paste(gpth,ff,sep=""))
+	trast<-snapToGrid(inprast=trast,baserast=base)
+	trast<-scale(trast)
+	if(nlayers(covarstack)==0){
+		covarstack<-trast
+	}else{
+		covarstack<-stack(covarstack,trast)
+	}
+}
+
+covardf<-as.data.frame(covarstack)
+covardf<-as.data.frame(na.omit(covardf))
+
+in_frame<-covardf[sample(1:nrow(covardf),30000),]	#about 6% of all cells
 optimcovars<-vif_func(in_frame=in_frame)
 
 ## load occupancy estimates and attribute with stack - the loaded data.frame is called "results"
