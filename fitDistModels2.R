@@ -14,6 +14,8 @@ dpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Classificatio
 
 ### load the data - divide into train and test
 load(file=paste(dpth,"occu_est.RData",sep=""))
+
+#normalize the variables
 nrecs<-nrow(occuest)
 trainsize<-round(0.8*nrecs)	#setting train size to 80%
 trainind<-sample(1:nrecs,trainsize);testind<-c(1:nrecs)[-trainind]
