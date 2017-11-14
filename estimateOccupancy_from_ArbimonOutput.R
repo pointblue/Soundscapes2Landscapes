@@ -30,7 +30,10 @@ countDawnRecs<-function(x,sth=5,edh=9){
 	return(ndc)
 }
 
-dat<-try(read.csv(paste(pth,"weme_all_recordings_(9-3-17).csv",sep=""))); if(inherits(dat,"try-error"))stop("Could not read data")
+filen<-"wavi_all_recordings_(10-07-17).csv"
+dat<-try(read.csv(paste(pth,filen,sep=""))); if(inherits(dat,"try-error"))stop("Could not read data")
+dat<-dat[,c("rec","model.presence","site","year","month","day","hour","minute","species","songtype")]
+names(dat)<-gsub("model.presence","presence",names(dat))
 geo<-try(read.csv(paste(pth,"s2l_points_metadata_170925.csv",sep=""))); if(inherits(geo,"try-error"))stop("Could not read geodata")
 geo<-geo[,c("guid","Lat","Long","UTM_Easting","UTM_Northing")];names(geo)<-c("site","Lat","Long","Easting","Northing")
 geo$site<-trimws(geo$site)
