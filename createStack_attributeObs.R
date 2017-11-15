@@ -146,6 +146,13 @@ covardf<-as.data.frame(na.omit(covardf))
 in_frame<-covardf[sample(1:nrow(covardf),30000),]	#about 6% of all cells
 optimcovars<-vif_func(in_frame=in_frame)
 
+save(optimcovars, file=paste(dpth,"optimcovars.RData",sep=""))
+writeRaster(covarstack, filename=paste(gpth,"covarstack.grd",sep=""), bandorder="BIL", overwrite=TRUE)
+
+################################## IGNORE CODE BELOW ##################################
+
+
+
 ## load occupancy estimates and attribute with stack - the loaded data.frame is called "results"
 load(paste(dpth,"testResults.RData",sep=""))
 resmx<-results[,c("Easting","Northing")]

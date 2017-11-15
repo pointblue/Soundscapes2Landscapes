@@ -41,7 +41,7 @@ nc<-ncol(trainset)
 brt<-gbm.step(data=trainset, gbm.x=9:nc, gbm.y=4, tree.complexity = 3,
 		learning.rate = 0.004, bag.fraction = 0.75, n.folds = 10, family = "gaussian", n.trees = 20, step.size = 20, max.trees = 2000,
 		plot.main = TRUE, verbose = TRUE, silent = FALSE, keep.fold.models = FALSE, keep.fold.vector = FALSE, keep.fold.fit = TRUE)
-save(brt,file=paste(dpth,"weme_brt.RData",sep=""))
+#save(brt,file=paste(dpth,"weme_brt.RData",sep=""))
 
 ## fit the mars - finding a simgularity?
 fml<-paste("lgt_est~",paste(names(trainset[9:nc]),collapse="+"),sep="")
