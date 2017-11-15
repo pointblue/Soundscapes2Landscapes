@@ -3,17 +3,25 @@
 # Author: lsalas
 ###############################################################################
 
-
+## dependendencies
 libs<-c("rminer","raster","dismo")
 lapply(libs, require, character.only = TRUE)
+# files: 
+#	covarstack.grd (the full stack of covariates - from createStack_attributeObs.R)
+#	optimcovars.RData (the file with the list of VIF-selected covariates - from createStack_attributeObs.R)
+#	allspecies_allrecs_site.summaries_geo.csv (the file that lists the detections by species and site - from file appendNewSpecies_toAllSpecies.R)
 
 ## paths
 gpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Geodata/"
 dpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Classifications/"
 
-#functions
-getLogit<-function(x){
+## functions
+# This function converts predictions to logits and multiplies by support, 
+# then add across weighted values for each cell and divides by the sum of support values
+getLogitWeighted<-function(preds,supp){
+	
 	lgv<-log(x)-log(1-x)
+	lgv<-lgv*suppv
 	return(lgv)
 }
 
@@ -65,9 +73,9 @@ covardf$cellId<-row.names(covardf)
 covardf<-as.data.frame(na.omit(covardf))
 cid<-as.integer(covardf$cellId)
 
-
+preds<-data.frame(cellId=cid)
 prfom<-as.data.frame(predict(rfom,covardf))
-preds<-data.frame(vrfom=as.numeric(prfom[,2]))
+preds$vrfom<-as.numeric(prfom[,2])
 psvmm<-as.data.frame(predict(svmm,covardf))
 preds$vsvmm<-as.numeric(psvmm[,2])
 pboom<-as.data.frame(predict(boom,covardf))
@@ -83,30 +91,25 @@ preds$vbrtm<-as.numeric(pbrtm[,1])
 test<-data.frame(observed=testset[,"p_est"])
 trfom<-as.data.frame(predict(rfom,testset))
 test$prfo<-as.numeric(trfom[,2])
-
 tsvmm<-as.data.frame(predict(svmm,testset))
 test$psvm<-as.numeric(tsvmm[,2])
-
 tboom<-as.data.frame(predict(boom,testset))
 test$pboo<-as.numeric(tboom[,2])
-
 #tnbam<-as.data.frame(predict(nbam,testset))
 #test$pnba<-as.numeric(tnbam[,2])
-
 tbrt<-as.data.frame(predict(brtm,testset,n.trees=140,type="response"))
 test$pbrt<-as.numeric(tbrt[,1])
 
 #support is then:
-supp<-apply(test[,2:5],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)),obs=test$observed)
-preds$lgrfom<-getLogit(preds$vrfom)
-preds$lgsvmm<-getLogit(preds$vsvmm)
-preds$lgboom<-getLogit(preds$vboom)
-preds$lgbrtm<-getLogit(preds$vbrtm)
+supp<-apply(test[,2:5],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
+#and weighted average is...
+preds$weighted<-apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[2:5])%*%supp/ssup,supp=supp,ssup=ssup)
 
-
-base<-covarstack[[1]]
-base[]<-NA
-base[cid]<-vals
-
-
+#convert to raster and plot...
+weighted<-covarstack[[1]]
+weighted[]<-NA
+cid<-preds$cellId;vals<-as.numeric(preds$weighted)
+weighted[cid]<-vals
+plot(weighted)
+writeRaster(weighted,filename=paste("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/predrasters/",spcd,".tif",sep=""),format="GTiff",overwrite=T)
 
