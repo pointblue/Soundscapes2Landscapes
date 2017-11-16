@@ -4,7 +4,7 @@
 ###############################################################################
 
 ## dependendencies
-libs<-c("rminer","raster","dismo")
+libs<-c("rminer","raster","dismo","plyr","data.table")
 lapply(libs, require, character.only = TRUE)
 # files: 
 #	covarstack.grd (the full stack of covariates - from createStack_attributeObs.R)
@@ -14,16 +14,6 @@ lapply(libs, require, character.only = TRUE)
 ## paths
 gpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Geodata/"
 dpth<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/Classifications/"
-
-## functions
-# This function converts predictions to logits and multiplies by support, 
-# then add across weighted values for each cell and divides by the sum of support values
-getLogitWeighted<-function(preds,supp){
-	
-	lgv<-log(x)-log(1-x)
-	lgv<-lgv*suppv
-	return(lgv)
-}
 
 ## selection inputs
 spcd<-"WREN"
@@ -42,31 +32,31 @@ presest$p_est_f<-as.factor(as.character(presest$p_est))
 
 #covars are normalized
 ## inspecting the covar data columns - it should all be fine  ############
-lapply(optimcovars,FUN=function(x){y<-summary(presest[,x]);return(y)})
+## NO NEED TO DO THIS AGAIN
+#lapply(optimcovars,FUN=function(x){y<-summary(presest[,x]);return(y)})
+
 ## two records missing, so...
 presest<-as.data.frame(na.omit(presest))
 
+## make train and test sets
 nrecs<-nrow(presest)
 trainsize<-round(percent.train*nrecs)	#setting train size to 80%
 trainind<-sample(1:nrecs,trainsize);testind<-c(1:nrecs)[-trainind]
 trainset<-presest[trainind,];testset<-presest[testind,]
 
 ##################################
+## fitting models
 nc<-ncol(trainset)-1
 fmlf<-paste("p_est_f~",paste(names(trainset[3:nc]),collapse="+"),sep="")
 fmln<-paste("p_est~",paste(names(trainset[3:nc]),collapse="+"),sep="")
 svmm<-fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2)
 rfom<-fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE)
 boom<-fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit)
-#nbam<-fit(as.formula(fmlf), data=trainset, model="naiveBayes",na.action=na.omit)
-#glmm<-fit(as.formula(fmlf), data=trainset, model="cv.glmnet",family="binomial")
 brtm<-gbm.step(data=trainset, gbm.x=3:nc, gbm.y=2, tree.complexity = 3,
-		learning.rate = 0.004, bag.fraction = 0.75, n.folds = 10, family = "bernoulli", n.trees = 20, step.size = 20, max.trees = 2000,
+		learning.rate = 0.001, bag.fraction = 0.75, n.folds = 10, family = "bernoulli", n.trees = 20, step.size = 20, max.trees = 2000,
 		plot.main = TRUE, verbose = TRUE, silent = FALSE, keep.fold.models = FALSE, keep.fold.vector = FALSE, keep.fold.fit = TRUE)
 
-#predicting to stack to test
-pbrt<-predict(covarstack,brtm,n.trees=140,type="response")
-
+## predicting to stack
 covardf<-as.data.frame(covarstack)
 covardf<-covardf[,optimcovars]
 covardf$cellId<-row.names(covardf)
@@ -80,14 +70,10 @@ psvmm<-as.data.frame(predict(svmm,covardf))
 preds$vsvmm<-as.numeric(psvmm[,2])
 pboom<-as.data.frame(predict(boom,covardf))
 preds$vboom<-as.numeric(pboom[,2])
-#pnbam<-as.data.frame(predict(nbam,covardf))
-#preds$vnbam<-as.numeric(pnbam[,2])
-#pglmm<-as.data.frame(predict(glmm,covardf))
-#preds$vglmm<-as.numeric(pglmm[,2])
 pbrtm<-as.data.frame(predict(brtm,covardf,n.trees=140,type="response"))
 preds$vbrtm<-as.numeric(pbrtm[,1])
 
-#predict to test set and eval the rmse
+## predict to test set and eval the rmse
 test<-data.frame(observed=testset[,"p_est"])
 trfom<-as.data.frame(predict(rfom,testset))
 test$prfo<-as.numeric(trfom[,2])
@@ -95,21 +81,39 @@ tsvmm<-as.data.frame(predict(svmm,testset))
 test$psvm<-as.numeric(tsvmm[,2])
 tboom<-as.data.frame(predict(boom,testset))
 test$pboo<-as.numeric(tboom[,2])
-#tnbam<-as.data.frame(predict(nbam,testset))
-#test$pnba<-as.numeric(tnbam[,2])
 tbrt<-as.data.frame(predict(brtm,testset,n.trees=140,type="response"))
 test$pbrt<-as.numeric(tbrt[,1])
 
-#support is then:
+## individual model support is then:
 supp<-apply(test[,2:5],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
-#and weighted average is...
-preds$weighted<-apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[2:5])%*%supp/ssup,supp=supp,ssup=ssup)
 
-#convert to raster and plot...
-weighted<-covarstack[[1]]
-weighted[]<-NA
+## convert predicted values to logits...
+#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
+preds<-data.table(preds)
+preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]
+preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]
+preds[,lgvboom:=log(vboom)-log(1-vboom),]
+preds[,lgvbrtm:=log(vbrtm)-log(1-vbrtm),]
+
+## and weighted average is...
+ssup<-sum(supp)
+preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
+## convert it back to probabilities...
+preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
+
+## convert to raster and plot...
+rastres<-covarstack[[1]]; rastres[]<-NA
 cid<-preds$cellId;vals<-as.numeric(preds$weighted)
-weighted[cid]<-vals
-plot(weighted)
-writeRaster(weighted,filename=paste("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/predrasters/",spcd,".tif",sep=""),format="GTiff",overwrite=T)
+rastres[cid]<-vals
+plot(rastres)
+## let's hurdle it by the naive prevalence...
+thresh<-sum(spdata[,spcd])/nrow(spdata)
+preds[,presence:=ifelse(weighted<=thresh,0,1),]
+trastres<-covarstack[[1]]; trastres[]<-NA
+vals<-as.numeric(preds$presence)
+trastres[cid]<-vals
+plot(trastres)
+
+## write as geotiff
+writeRaster(rastres,filename=paste("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/predrasters/",spcd,".tif",sep=""),format="GTiff",overwrite=T)
 
