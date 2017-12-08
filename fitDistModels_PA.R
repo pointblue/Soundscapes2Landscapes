@@ -56,6 +56,8 @@ brtm<-gbm.step(data=trainset, gbm.x=3:nc, gbm.y=2, tree.complexity = 3,
 		learning.rate = 0.001, bag.fraction = 0.75, n.folds = 10, family = "bernoulli", n.trees = 20, step.size = 20, max.trees = 2000,
 		plot.main = TRUE, verbose = TRUE, silent = FALSE, keep.fold.models = FALSE, keep.fold.vector = FALSE, keep.fold.fit = TRUE)
 
+nt<-brtm$n.trees
+
 ## predicting to stack
 covardf<-as.data.frame(covarstack)
 covardf<-covardf[,optimcovars]
@@ -70,7 +72,7 @@ psvmm<-as.data.frame(predict(svmm,covardf))
 preds$vsvmm<-as.numeric(psvmm[,2])
 pboom<-as.data.frame(predict(boom,covardf))
 preds$vboom<-as.numeric(pboom[,2])
-pbrtm<-as.data.frame(predict(brtm,covardf,n.trees=140,type="response"))
+pbrtm<-as.data.frame(predict(brtm,covardf,n.trees=nt,type="response"))
 preds$vbrtm<-as.numeric(pbrtm[,1])
 
 ## predict to test set and eval the rmse
@@ -81,7 +83,7 @@ tsvmm<-as.data.frame(predict(svmm,testset))
 test$psvm<-as.numeric(tsvmm[,2])
 tboom<-as.data.frame(predict(boom,testset))
 test$pboo<-as.numeric(tboom[,2])
-tbrt<-as.data.frame(predict(brtm,testset,n.trees=140,type="response"))
+tbrt<-as.data.frame(predict(brtm,testset,n.trees=nt,type="response"))
 test$pbrt<-as.numeric(tbrt[,1])
 
 ## individual model support is then:
