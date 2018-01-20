@@ -149,17 +149,3 @@ optimcovars<-vif_func(in_frame=in_frame)
 save(optimcovars, file=paste(dpth,"optimcovars.RData",sep=""))
 writeRaster(covarstack, filename=paste(gpth,"covarstack.grd",sep=""), bandorder="BIL", overwrite=TRUE)
 
-################################## IGNORE CODE BELOW ##################################
-
-
-
-## load occupancy estimates and attribute with stack - the loaded data.frame is called "results"
-load(paste(dpth,"testResults.RData",sep=""))
-resmx<-results[,c("Easting","Northing")]
-resext<-extract(covarstack,resmx,df=TRUE)
-occuest<-cbind(results,resext[,optimcovars])
-
-## save the attributed occupancy data
-save(occuest,optimcovars, file=paste(dpth,"occu_est.RData",sep=""))
-
-
