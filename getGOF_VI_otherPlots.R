@@ -216,11 +216,15 @@ p<-ggplot(data=allsp_vi,aes(x=Species,y=count)) +
 		geom_bar(aes(fill=VarCategory),position="stack",stat="identity",color="black") +
 		scale_y_continuous(breaks=c(0,2,4,6,8,10)) +
 		scale_fill_brewer(palette = "Set1") +
+		theme(axis.text=element_text(size=24)) +
+		theme(axis.title=element_text(size=28)) +
+		theme(strip.text=element_text(size=24)) +
+		theme(legend.text=element_text(size=24), legend.title=element_text(size=24), legend.key.size=unit(2, 'lines')) +
 		coord_flip() +
 		facet_wrap(~Method,ncol=2) + 
 		labs(x="",color="Variable type",fill="Variable type",y="Number of variables")
 
-jpeg(file=paste(dpth,"/Gof_VarImp_plots/All_Species_VarImp.jpeg",sep=""),quality=100,width=340,height=320)
+jpeg(file=paste(dpth,"/Gof_VarImp_plots/All_Species_VarImp.jpeg",sep=""),quality=100,width=960,height=800)
 print(p)
 dev.off()
 
