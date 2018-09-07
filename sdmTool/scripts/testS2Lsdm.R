@@ -12,6 +12,27 @@ option_list = list(
 )
 opt = parse_args(OptionParser(option_list=option_list))
 
+## Need this dir contents check function...
+checkDirContents<-function(pth,varn,filt=NA,check){
+	if(file.exists(paste(pth,"/data/",varn,sep=""))){
+		dircont<-list.files(paste(pth,"/data/",varn,sep=""))
+		if(!is.na(filt)){
+			dircont<-subset(dircont,!grepl(".tif.",dircont))
+		}else{
+			if(NROW(dircont)==check){
+				tmpdf<-data.frame(variable=varn,status="OK")
+			}else{
+				tmpdf<-data.frame(variable=varn,status="Missing some files")
+			}
+		}
+		
+	}else{
+		tmpdf<-data.frame(variable=varn,status="Directory not found")
+	}
+	return(tmpdf)
+}
+
+## making sure the path does not end in a forward slash /
 pth<-opt$p;if(substr(pth,nchar(pth),nchar(pth))=="/"){pth<-substr(pth,1,nchar(pth)-1)}
 
 ## check that the logs folder exists, if not then create
@@ -64,25 +85,54 @@ if(dc==1){
 			cat("\n","\n",file = zz)
 			
 			## tests that the data files exist
-			cat("Checking for the presence of the BCM data... \n",file = zz)
-			if(file.exists(paste(pth,"data/BCM/1000M/aet",sep="/"))){
-				cfn<-list.files(paste(pth,"data/BCM/1000M/aet",sep="/"))
-				#... do the same for the other directories under BCM - should all have 60 files each
-			}else{
-				cat("Some BCM data files may be missing.", file = zz, sep = "\n")
-				#report which ones don't add up
-				cat(pth, file=zz)
-				minrec<-0
+			## BCM
+			cat("Checking for the presence of the covariate data... \n",file = zz)
+			varnams<-c("aet","cwd","pet","ppt","tmn","tmx")
+			chkdf<-data.frame()
+			for(dd in c("1000M","500M","250M")){
+				for(vv in varnams){
+					tmpdf<-checkDirContents(pth=pth,varn=paste("BCM",dd,vv,sep="/"),filt=NA,check=60)
+					chkdf<-rbind(chkdf,tmpdf)
+				}
 			}
+			## Coast_Distance
+			for(dd in c("1000M","500M","250M")){
+				tmpdf<-checkDirContents(pth=pth,varn=paste("Coast_Distance",dd,sep="/"),filt=".tif.",check=1)
+				chkdf<-rbind(chkdf,tmpdf)
+			}
+			## DEM_Rescaled
+			for(dd in c("1000M","500M","250M")){
+				tmpdf<-checkDirContents(pth=pth,varn=paste("DEM_Rescaled",dd,sep="/"),filt=NA,check=1)
+				chkdf<-rbind(chkdf,tmpdf)
+			}
+			## DHI_MODIS
+			for(dd in c("1000M","500M","250M")){
+				tmpdf<-checkDirContents(pth=pth,varn=paste("DHI_MODIS",dd,sep="/"),filt=NA,check=7)
+				chkdf<-rbind(chkdf,tmpdf)
+			}
+			## Stream_Distance
+			for(dd in c("1000M","500M","250M")){
+				tmpdf<-checkDirContents(pth=pth,varn=paste("Stream_Distance",dd,sep="/"),filt=".tif.",check=1)
+				chkdf<-rbind(chkdf,tmpdf)
+			}
+			
+			## Street_Distance
+			for(dd in c("1000M","500M","250M")){
+				tmpdf<-checkDirContents(pth=pth,varn=paste("Street_Distance",dd,sep="/"),filt=".tif.",check=1)
+				chkdf<-rbind(chkdf,tmpdf)
+			}
+			write.table(chkdf, row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz)
-			#test the next data directories
+			
+			# test loading the bird data
+			
+			#then test reading a yaml...
+			
+			
+			#Done
 			
 		}
 		
-		# test loading the bird data
-
-		#then test reading the yaml...
-
-		#Done
+		
 	}
 }

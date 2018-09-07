@@ -1,0 +1,8 @@
+## This directory is the repository of simple text yaml files specifying the model fits to perform with the S2L sdm tool
+## The yaml files include the following parameters and acceptable values
+species: all   # or specify one or several with the array of four-letter codes. E.g., [sosp, coye, wiwa]
+years: all  # or specify the desired years (2013 to 2015) with an array. E.g., [2013,2014]
+resolution: 1000   # valid values: 1000, 500, 250
+noise: high    # either high or low
+
+# what else? Ask Matt...
