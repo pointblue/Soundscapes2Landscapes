@@ -67,10 +67,12 @@ if(dc==1){
 		minrec<-1
 		
 		## test that the libraries needed are installed and can be loaded
+		options(warn=-1)
 		cat("Testing load of required libraries... \n",file = zz)
 		libs<-c("rminer","raster","dismo","plyr","data.table","yaml")
 		lt<-unlist(lapply(libs, require, character.only = TRUE,quietly=TRUE))
 		dflibs<-data.frame(library=libs,test=lt);dflibs$result<-ifelse(dflibs$test==TRUE,"Loaded","Not loaded")
+		options(warn=0)
 		if(FALSE %in% lt){
 			cat("Some required libraries could not be loaded.", file = zz, sep = "\n")
 			write.table(dflibs[,c(1,3)], row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
@@ -125,14 +127,31 @@ if(dc==1){
 			cat("\n","\n",file = zz)
 			
 			# test loading the bird data
+			## HERE!!!
 			
 			#then test reading a yaml...
-			
-			
+			ydpth<-paste(pth,"/requests/readme.yaml",sep="")
+			yfl<-yaml.load_file(ydpth)
+			if(identical(names(yfl),c("species","years","resolution","noise"))){
+				cat("Able to read and understand the example readme.yaml file", file = zz, sep = "\n")
+			}else{
+				cat("Error: failed to read or understand the example readme.yaml file. Has it been deleted or altered?", file = zz, sep = "\n")
+			}
+			cat("\n","\n",file = zz)
 			#Done
 			
 		}
 		
+		cat("\n","End of log.","\n","\n",file=zz)
+		if(opt$s){
+			w<-unlist(sessionInfo())
+			tdf<-data.frame(param=names(w),value=w);row.names(tdf)<-NULL
+			cat("SessionInfo:",file=zz,sep="\n")
+			write.table(tdf, row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
+		}
 		
+		close(zz)
+		
+		print(paste("Tests completed. Check file",logfile,"for results"), quote=FALSE)
 	}
 }
