@@ -78,6 +78,7 @@ if(dc==1){
 			write.table(dflibs[,c(1,3)], row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
 			minrec<-0
 		}else{
+			cat("All required libraries successfully loaded.", file = zz, sep = "\n")
 			cat("\n","\n",file = zz)
 			
 			## report the assumed file location
@@ -132,7 +133,7 @@ if(dc==1){
 			#then test reading a yaml...
 			ydpth<-paste(pth,"/requests/readme.yaml",sep="")
 			yfl<-yaml.load_file(ydpth)
-			if(identical(names(yfl),c("species","years","resolution","noise"))){
+			if(identical(names(yfl),c("species","resolution","noise","scale","GEDIyears"))){
 				cat("Able to read and understand the example readme.yaml file", file = zz, sep = "\n")
 			}else{
 				cat("Error: failed to read or understand the example readme.yaml file. Has it been deleted or altered?", file = zz, sep = "\n")
