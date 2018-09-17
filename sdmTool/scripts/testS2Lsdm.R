@@ -69,7 +69,7 @@ if(dc==1){
 		## test that the libraries needed are installed and can be loaded
 		options(warn=-1)
 		cat("Testing load of required libraries... \n",file = zz)
-		libs<-c("rminer","raster","dismo","plyr","data.table","yaml")
+		libs<-c("rminer","raster","dismo","plyr","data.table","yaml","data.table")
 		lt<-unlist(lapply(libs, require, character.only = TRUE,quietly=TRUE))
 		dflibs<-data.frame(library=libs,test=lt);dflibs$result<-ifelse(dflibs$test==TRUE,"Loaded","Not loaded")
 		options(warn=0)
