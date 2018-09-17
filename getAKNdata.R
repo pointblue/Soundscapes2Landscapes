@@ -5,21 +5,25 @@
 
 libs<-c("RODBC","raster","plyr","data.table","rgdal")
 lapply(libs, require, character.only = TRUE)
-source("C:/Users/lsalas/git/sparklemotion/lsalas_rcode/AKN/dataRequests/getDataUtils.R")
+source("C:/Users/lsalas/git/sparklemotion/AKN/dataRequests/getDataUtils.R")
 
-ext<-c(-124.0229,-122.3157,38.09592,40.01872); names(ext)<-c("xmin","xmax","ymin","ymax") #sonoma, lake, mendo
+#using: +proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0 
+#ext<-c(-124.0229,-122.3157,38.09592,40.01872); names(ext)<-c("xmin","xmax","ymin","ymax") #sonoma, lake, mendo
+ext<-c(-123.6325,-122.3475,38.07326,38.85292); names(ext)<-c("xmin","xmax","ymin","ymax") #sonoma only
 
 conn<-odbcConnect("ravian_wh")
-pcd<-getSQLforDataFromWH(tablename="ravianpointcountlevel3_v1",spcodes=NA,projectcodes=NA,years=c(2014,2015),extent=ext,con=conn)
-asd<-getSQLforDataFromWH(tablename="ravianareasearchlevel3_v1",spcodes=NA,projectcodes=NA,years=c(2014,2015),extent=ext,con=conn)
-bbd<-getSQLforDataFromWH(tablename="ravianbbsbase_v1",spcodes=NA,projectcodes=NA,years=c(2014,2015),extent=ext,con=conn)
+pcd<-getSQLforDataFromWH(tablename="ravianpointcountlevel3_v1",spcodes=NA,projectcodes=NA,years=c(2013,2014,2015),extent=ext,con=conn)
+asd<-getSQLforDataFromWH(tablename="ravianareasearchlevel3_v1",spcodes=NA,projectcodes=NA,years=c(2013,2014,2015),extent=ext,con=conn)
+bbd<-getSQLforDataFromWH(tablename="ravianbbsbase_v1",spcodes=NA,projectcodes=NA,years=c(2013,2014,2015),extent=ext,con=conn)
 odbcClose(conn)
 
+#Make it Oct2014 to Sep2015 - Spring and Summer
 conn<-odbcConnect("ebird")
-ebd<-getSQLforEBirdData(tablename="ebd_usaonly",commname=NA,states="California",counties=c("Sonoma","Mendocino","Lake"),years=c(2014,2015),con=conn)
+#ebd<-getSQLforEBirdData(tablename="ebd_usaonly",commname=NA,states="California",counties=c("Sonoma","Mendocino","Lake"),years=c(2014,2015),con=conn)	
+ebd<-getSQLforEBirdData(tablename="ebd_usaonly",commname=NA,states="California",counties=c("Sonoma"),years=c(2013,2014,2015),con=conn)	
 odbcClose(conn)
 
-save(pcd,asd,bbd,ebd,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/SonoMendoLake/rawData.Rdata")
+save(pcd,asd,bbd,ebd,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/rawData2013_15.Rdata")
 
 #filter eBird for appropriate protocols and remove dupes
 ebdc<-filterEBird(ebd,distlim=0.1, protocols=NA,approv=1,rev=0,allsp=1)
@@ -53,7 +57,7 @@ effort<-subset(effort,!is.na(county))
 obsfields<-c(efffields,"CommonName","SpeciesCode","ObservationCount")
 obsebd<-c(effebd,"COMMON_NAME","OBSERVATION_COUNT")
 obspc<-pcd[,obsfields,with=F];obsas<-asd[,obsfields,with=F];obsbb<-bbd[,obsfields,with=F]
-obs<-rbind(obspc,obsas);obs<-rbind(obs,obsbb)
+obs<-rbind(obspc,obsas);obs<-rbind(obs,obsbb);obs<-subset(obs,!is.na(SpeciesCode))
 obseb<-ebdc[,obsebd,with=F];names(obseb)<-c(efffields,"CommonName","ObservationCount")
 
 #add species code to obsebd - query from fieldbird_v2!
@@ -85,7 +89,8 @@ obsdata<-subset(obsdata,!is.na(county))
 obsdata[,obsCount:=as.integer(as.character(ObservationCount)),]
 obsdata[,obsCount:=ifelse(is.na(obsCount),1,obsCount),]
 
-save(obsdata,effort,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/SonoMendoLake/unmergedData.Rdata")
+#save(obsdata,effort,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/SonoMendoLake/unmergedData.Rdata")
+save(obsdata,effort,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/unmergedData.Rdata")
 
 ##Then what?
 #report abundance by species??
