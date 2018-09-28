@@ -135,7 +135,7 @@ for(zz in resolution){
 			svmm<-fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2)
 			rfom<-fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE)
 			boom<-fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit)
-			xgbm<-fitXGB(trainset,testset,deflatedcovardf,predgriddf)
+			xgbm<-try(fitXGB(trainset,testset,deflatedcovardf,predgriddf),silent=TRUE)
 			
 			## predicting to stack
 			preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",zz)]))
@@ -145,7 +145,7 @@ for(zz in resolution){
 			preds$vsvmm<-as.numeric(psvmm[,2])
 			pboom<-as.data.frame(predict(boom,predgriddf))
 			preds$vboom<-as.numeric(pboom[,2])
-			preds$vxgbm<-xgbm$predgrid
+			if(!inherits(xgbm,"try-error")){preds$vxgbm<-xgbm$predgrid}
 			
 			## predict to test set and eval the rmse
 			test<-data.frame(observed=testset[,"PresAbs"])
@@ -155,10 +155,12 @@ for(zz in resolution){
 			test$psvm<-as.numeric(tsvmm[,2])
 			tboom<-as.data.frame(predict(boom,testset))
 			test$pboo<-as.numeric(tboom[,2])
-			test$xgbm<-xgbm$predtest
+			if(!inherits(xgbm,"try-error")){
+				test$xgbm<-xgbm$predtest
+			}
 			
 			## individual model support is then:
-			supp<-apply(test[,2:5],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
+			supp<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
 			mv<-ceiling(max(supp));supp<-mv-supp
 			
 			save(trainset,testset,test,supp,rfom,svmm,boom,xgbm, file=paste0(svpth,zz,"/",spcd,"_",zz,"_modelResults.RData"))
