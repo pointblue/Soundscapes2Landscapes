@@ -13,11 +13,12 @@ rpth<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
 rezz<-c("250M","500M","1000M")
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
-bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
+#bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
+bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-"_3yr_"
 gedinoise<-"noised_"
-gedivars<-c("niM2","rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gVDRt")
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gVDRt")
 birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/"
 
 
@@ -26,12 +27,8 @@ birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/
 # rast is the raster from which to obtain cellId values
 # rez is a string indicating the resolution of the raster, and thus names the raster itself. Possible values are 200, 500, and 1000
 getCellId<-function(df,rast,rez){
-	gdf<-df[,c("x","y")]
-	coordinates(gdf)<-c("x","y")
-	
-	cid<-extract(rast,gdf,cellnumbers=T,df=T)
 	cidnam<-paste0("gId",rez)
-	df[,cidnam]<-cid$cells
+	df[,cidnam]<-cellFromXY(rast,df[,c("x","y")])
 	
 	return(df)
 }
@@ -112,7 +109,7 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 	
 }
 
-
+tm<-Sys.time()
 ##Start rezz loop here...
 q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars){
 			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
@@ -243,5 +240,5 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			
 		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods,gediyr=gediyr,gedinoise=gedinoise,gedivars=gedivars)
 
-
+Sys.time()-tm
 
