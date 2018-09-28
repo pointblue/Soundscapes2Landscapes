@@ -27,12 +27,8 @@ birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/
 # rast is the raster from which to obtain cellId values
 # rez is a string indicating the resolution of the raster, and thus names the raster itself. Possible values are 200, 500, and 1000
 getCellId<-function(df,rast,rez){
-	gdf<-df[,c("x","y")]
-	coordinates(gdf)<-c("x","y")
-	
-	cid<-extract(rast,gdf,cellnumbers=T,df=T)
 	cidnam<-paste0("gId",rez)
-	df[,cidnam]<-cid$cells
+	df[,cidnam]<-cellFromXY(rast,df[,c("x","y")])
 	
 	return(df)
 }
