@@ -8,7 +8,7 @@ library(ggplot2)
 
 pathToData<-"c:/temp/s2l/250M/"
 
-load(paste0(pathToData,"topVariables_250M.RData"))
+load(paste0(pathToData,"NOGEDI_topVariables_250M.RData"))
 topvars$RelImportance<-as.numeric(unlist(topvars$RelImportance))
 
 species<-data.frame(spcd=c("ACWO","CALT","WESJ","MODO","NOMO","OATI","AMGO","LEGO","SPTO","DEJU", "HOFI","BLPH","RWBL","SOSP", "WCSP"),
@@ -27,5 +27,5 @@ p<-ggplot(top,aes(x=Species,y=RelImportance)) +
 		facet_wrap(~Model,ncol=2) + coord_flip() + 
 		labs(x="",y="Relative Importance",color="Var. Type",fill="Var. Type")
 
-jpeg(file="c:/users/lsalas/desktop/GEDI_varImportance_250M.jpeg",quality=100, width=450, height=400)
+jpeg(file="c:/users/lsalas/desktop/NOGEDI_varImportance_250M.jpeg",quality=100, width=450, height=400)
 print(p);dev.off()
