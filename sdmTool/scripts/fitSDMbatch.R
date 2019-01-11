@@ -99,9 +99,11 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#report the arguments passed in the test call
 			cat("Arguments passed or created in script call:", file = zz, sep = "\n", append=TRUE)
-			optvals<-data.frame(Parameter=c("testonly","gitpath","savepath","logdir","species","resolution","yearspan","sessionInfo"),
-					Value=c(tst,gitpath,svpath,logdir,spp,rez,yrsp,sinf))
-			write.table(optvals, row.names = FALSE, col.names = TRUE, file=zz, append=TRUE)
+			Parameter<-c("testonly","gitpath","savepath","logdir","species","resolution","yearspan","sessionInfo")
+			print(Parameter)
+			Value<-c(tst,gitpath,svpath,logdir,spp,rez,yrsp,sinf);print(Value)
+			optdf<-data.frame(Parameter,Value)
+			write.table(optdf, row.names = FALSE, col.names = TRUE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
 			
 			#test the presence of the data files
