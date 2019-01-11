@@ -22,8 +22,8 @@ option_list = list(
 ## parse the arguments 
 opt = parse_args(OptionParser(option_list=option_list))
 gitpath<-opt$g;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
-svpath<-opt$p;if(substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
-logdir<-opt$l;if(substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
+svpath<-opt$p;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
+logdir<-opt$l;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
 spp<-opt$s;rez<-opt$r;yrsp<-opt$y;gedi<-opt$w;sinf<-opt$i
 
 ## check that the git folder exist
