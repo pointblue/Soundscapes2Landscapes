@@ -8,24 +8,24 @@ suppressPackageStartupMessages(require(optparse))	#need to load this library fir
 
 ## describe the scritp function's batch call arguments
 option_list = list(
-		make_option(c("-t", "--testonly"), action="store", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE"),
-		make_option(c("-g", "--gitpath"), action="store", default="/home/ubuntu/Soundscapes2Landscapes/", type="character", help="path to the git directory. Default:"),
-		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored."),
-		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored."),
-		make_option(c("-s", "--species"), action="store", default="WESJ", type="character", help="species code; e.g., WESJ (default)"),
-		make_option(c("-r", "--resolution"), action="store", default="1000M", type="character", help="spatial resolution; either 1000M (default), 500M or 250M"),
-		make_option(c("-y", "--yearspan"), action="store", default="3yr", type="character", help="year span; either 1yr, 2yr or 3yr (default)"),
-		make_option(c("-w", "--withgedi"), action="store", default=FALSE, type="logical", help="logical: include gedi variables? Defaults to FALSE"),
-		make_option(c("-i", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
+		make_option(c("-t", "--testonly"), action="store", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE", dest="tst"),
+		make_option(c("-g", "--gitpath"), action="store", default="/home/ubuntu/Soundscapes2Landscapes/", type="character", help="path to the git directory. Default: /home/ubuntu/Soundscapes2Landscapes/", dest="gitpath"),
+		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored. If none or invalid, attempts to create ~/gitpath/results", dest="svpath"),
+		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored. If none or invalid, attempts to create ~/gitpath/logs", dest="logdir"),
+		make_option(c("-s", "--species"), action="store", default="WESJ", type="character", help="species code; e.g., WESJ (default)", dest="spp"),
+		make_option(c("-r", "--resolution"), action="store", default="1000M", type="character", help="spatial resolution; either 1000M (default), 500M or 250M", dest="rez"),
+		make_option(c("-y", "--yearspan"), action="store", default="3yr", type="character", help="year span; either 1yr, 2yr or 3yr (default)", dest="yrsp"),
+		make_option(c("-w", "--withgedi"), action="store", default=TRUE, type="logical", help="logical: include gedi variables? Defaults to TRUE", dest="gedi"),
+		make_option(c("-o", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE", dest="sinf")
 )
 
 
 ## parse the arguments 
 opt = parse_args(OptionParser(option_list=option_list))
-gitpath<-opt$g;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
-svpath<-opt$p;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
-logdir<-opt$l;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
-spp<-opt$s;rez<-opt$r;yrsp<-opt$y;gedi<-opt$w;sinf<-opt$i
+gitpath<-opt$gitpath;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
+svpath<-opt$svpath;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
+logdir<-opt$logdir;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
+spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$tst
 
 ## check that the git folder exist
 if(!dir.exists(gitpath)){	# no gitpath info - can't go further
@@ -35,28 +35,27 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 	print("Found git directory...", quote=FALSE)
 	ldt<-0
 	if(is.null(logdir)){	#no log dir provided
-		print("1") #############################################
 		logdir<-paste0(gitpath,"logs/")
 		if(!dir.exists(logdir)){
-			print("1.1") #############################################
 			zz <- try(dir.create(logdir),silent=T)
 			if(inherits(zz,"try-error")){	#failed to create dir
 				print("Wrong log directory path. Could not create log directory in the Soundscapes2Landscapes folder. Please check access permissions, or run test with appropriate credentials, or provide a valid path.", quote=FALSE)
 				print("No tests performed; no logs generated.", quote=FALSE)
 			}else{	#success creating log dir
-				print(paste0("No logs directory provided, so created '",gitpath,"logs/' directory."), quote=FALSE)
+				print(paste0("No logs directory provided, so created '",logdir," directory."), quote=FALSE)
 				ldt<-1
 			}
+		}else{
+			print(paste("Found logs directory:",logdir), quote=FALSE)
+			ldt<-1
 		}
 	}else{	# valid log dir provided
-		print("2") #############################################
-		print("Found logs directory...", quote=FALSE)
+		print("Valid logs directory found...", quote=FALSE)
 		ldt<-1
 	}
 	if(ldt==1){	# have valid log dir, then... 
-		print("3") #############################################
 		## open connection to log file
-		filen<-paste("FitSDMscriptTest",format(Sys.time(),"%Y%m%d-%H%M"),sep="_")
+		filen<-paste("FitSDMscriptTest",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
 		logfile<-paste(logdir,filen,".log",sep="")
 		zz <- try(file(logfile, "w"),silent=T)
 		if(inherits(zz,"try-error")){
@@ -73,17 +72,22 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			cat("Testing validity of results directory:", file = zz, sep = "\n", append=TRUE)
 			#test that the results dir is there or that can create in gitpath
 			if(is.null(svpath) || !dir.exists(svpath)){	
-				cat("   Missing or invalid directory where to store results.", file = zz, sep = "\n", append=TRUE)
+				cat("   Missing or invalid directory provided where to store results.", file = zz, sep = "\n", append=TRUE)
 				svpath<-paste0(gitpath,"results/")
-				zz <- try(dir.create(svpath),silent=T)
-				if(!inherits(zz,"try-error")){
-					restest<-"SUCCESS"
+				if(!dir.exists(svpath)){
+					rr <- try(dir.create(svpath),silent=T)
+					if(!inherits(rr,"try-error")){
+						restest<-"SUCCESS"
+					}else{
+						restest<-"FAILED - WARNING!!!"
+					}
+					cat(paste0("   Testing that one can be created at ",gitpath,"results/ ...",restest), file = zz, sep = "\n", append=TRUE)
 				}else{
-					restest<-"FAILED - WARNING!!!"
+					cat(paste0("   Found directory where to save results at ",svpath), file = zz, sep = "\n", append=TRUE)
 				}
-				cat(paste0("   Testing that one can be created at ",gitpath,"results/ ...",restest), file = zz, sep = "\n", append=TRUE)
+				
 			}else{
-				cat("   Found directory where to save results...", file = zz, sep = "\n\n", append=TRUE)
+				cat("   Valid directory where to save results provided", file = zz, sep = "\n\n", append=TRUE)
 			}
 			
 			#test presence of all libraries needed
@@ -94,9 +98,11 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			cat("\n","\n",file = zz, append=TRUE)
 			
 			#report the arguments passed in the test call
-			cat("Arguments passed in script test call:", file = zz, sep = "\n", append=TRUE)
-			optvals<-as.data.frame(opt)
-			write.table(optvals, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
+			cat("Arguments passed or created in script call:", file = zz, sep = "\n", append=TRUE)
+			Parameter<-c("testonly","gitpath","savepath","logdir","species","resolution","yearspan","sessionInfo")
+			Value<-c(tst,gitpath,svpath,logdir,spp,rez,yrsp,sinf)
+			optdf<-data.frame(Parameter,Value)
+			write.table(optdf, row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
 			
 			#test the presence of the data files
@@ -109,12 +115,13 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				cat("Testing presence of data files... Found all the needed data files", file = zz, sep = "\n", append=TRUE)
 			}
 			
-			#HERE determine if running the model fitting script
+			#HERE determine if running the model fitting script (testonly=FALSE)
 			#If so, source the sdmfit file and pre-compile the sdm fitting function
 			
 			#end the log
 			cat("\n","End of test.","\n","\n",file=zz, append=TRUE)
-			if(sinf){
+			
+			if(sinf==TRUE){
 				w<-unlist(sessionInfo())
 				tdf<-data.frame(param=names(w),value=w);row.names(tdf)<-NULL
 				cat("SessionInfo:",file=zz,sep="\n", append=TRUE)
