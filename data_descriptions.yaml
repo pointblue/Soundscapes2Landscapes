@@ -4,27 +4,30 @@
 DatasetTypes:
    DatasetType:
       TypeName: wav_file
-         TypeDescription: unique 1-minute recording at a deployment location.
-         Repositories:
-            RepositoryName: GoogleDrive
-               RepositoryDescription: The drive folder used for the project in Google Drive
-               RepositoryAccess: Who has access to this?
-               RepositoryProvider: Google
-            RepositoryName: Arbimon-II
-               RepositoryDescription: The project holding the aural data in Arbimon-II
-               RepositoryAccess: Who has access to this?
-               RepositoryProvider: Amazon
+      TypeDescription: unique 1 minute recording at a deployment location
+      Repositories:
+         RepositoryName: GoogleDrive
+         RepositoryDescription: The drive folder used for the project in Google Drive
+         RepositoryAccess: Who has access to this?
+         RepositoryProvider: Google
+         
+         RepositoryName: Arbimon-II
+         RepositoryDescription: The project holding the aural data in Arbimon-II
+         RepositoryAccess: Who has access to this?
+         RepositoryProvider: Amazon
+         
       TypeName: shape_file
-         TypeDescription: file containing geospatial information on each deployment location.
-         Repositories:
-            RepositoryName: GoogleDrive
-               RepositoryDescription: The drive folder used for the project in Google Drive
-               RepositoryAccess: Who has access to this?
-               RepositoryProvider: Google
-            RepositoryName: Arbimon-II
-               RepositoryDescription: The project holding the aural data in Arbimon-II
-               RepositoryAccess: Who has access to this?
-               RepositoryProvider: Amazon            
+      TypeDescription: file containing geospatial information on each deployment location.
+      Repositories:
+         RepositoryName: GoogleDrive
+         RepositoryDescription: The drive folder used for the project in Google Drive
+         RepositoryAccess: Who has access to this?
+         RepositoryProvider: Google
+         
+         RepositoryName: Arbimon-II
+         RepositoryDescription: The project holding the aural data in Arbimon-II
+         RepositoryAccess: Who has access to this?
+         RepositoryProvider: Amazon            
                
 ## We need to add all data products here, including the data we used to develop the predictive models. 
 ## This is to include everything   

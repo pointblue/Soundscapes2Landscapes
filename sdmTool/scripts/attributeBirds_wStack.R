@@ -4,13 +4,15 @@
 ###############################################################################
 
 
-#prepare the stack
-#convert to df with cellId
-#load the bird files at each rez
-#merge and save
+# prepare the stack
+# convert to df with cellId
+# load the bird files at each rez
+# starting with 250M resolution, determine the variables to include with VIF
+# use that same set of variables at all resolutions
+# merge and save
 library(raster); library(fmsb);library(plyr)
 rpth<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
-rezz<-c("250M","500M","1000M")
+rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
@@ -18,7 +20,9 @@ bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-"_3yr_"
 gedinoise<-"noised_"
-gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gVDRt")
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","trugrnd","truetop",
+		"rhReal2","rhReal26","rhReal50","rhReal76","rhReal98","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
+		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
 birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/"
 
 
@@ -111,9 +115,11 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 
 tm<-Sys.time()
 ##Start rezz loop here...
+covarInf<-NULL
 q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars){
 			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
 			xshft<-ifelse(zz=="1000M",-381.2,118.8)
+			
 			# DEM_Rescaled
 			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/N38W123+124_1arc_V2_",zz,".tif")
 			dem<-raster(pth)
@@ -211,9 +217,12 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			scaledcovars<-scale(covardf[,3:(nccdf-1)])
 			scaledcovardf<-cbind(scaledcovars,covardf[,c(1:2,nccdf)])
 			
-			# VIF-corrected
-			covarInf<-vif_func(in_frame=scaledcovars)
-			deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
+			# VIF-corrected - ASSUMING the first zz is indeed 250M
+			if(is.null(covarInf) && zz=="250M"){
+				covarInf<-vif_func(in_frame=scaledcovars)
+			}else{
+				deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
+			}
 			
 			# loop through each species' data and merge with the above tables 
 			for(ff in list.files(birdfiles)){
