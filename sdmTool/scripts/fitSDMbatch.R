@@ -16,7 +16,7 @@ option_list = list(
 		make_option(c("-r", "--resolution"), action="store", default="1000M", type="character", help="spatial resolution; either 1000M (default), 500M or 250M"),
 		make_option(c("-y", "--yearspan"), action="store", default="3yr", type="character", help="year span; either 1yr, 2yr or 3yr (default)"),
 		make_option(c("-w", "--withgedi"), action="store", default=FALSE, type="logical", help="logical: include gedi variables? Defaults to FALSE"),
-		make_option(c("-i", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
+		make_option(c("-o", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
 )
 
 
@@ -25,7 +25,7 @@ opt = parse_args(OptionParser(option_list=option_list))
 gitpath<-opt$g;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
 svpath<-opt$p;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
 logdir<-opt$l;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
-spp<-opt$s;rez<-opt$r;yrsp<-opt$y;gedi<-opt$w;sinf<-opt$i;tst<-opt$t
+spp<-opt$s;rez<-opt$r;yrsp<-opt$y;gedi<-opt$w;sinf<-opt$o;tst<-opt$t
 
 ## check that the git folder exist
 if(!dir.exists(gitpath)){	# no gitpath info - can't go further
@@ -99,9 +99,9 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#report the arguments passed in the test call
 			cat("Arguments passed or created in script call:", file = zz, sep = "\n", append=TRUE)
-			optvals<-data.frame(Parameter=c("testonly","gitpath","savepath","logdir","species","resolution","yearspan","withGEDI","sessionInfo"),
+			optvals<-data.frame(Parameter=c("testonly","gitpath","savepath","logdir","species","resolution","yearspan","sessionInfo"),
 					Value=c(tst,gitpath,svpath,logdir,spp,rez,yrsp,sinf))
-			write.table(optvals, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
+			write.table(optvals, row.names = FALSE, col.names = TRUE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
 			
 			#test the presence of the data files
