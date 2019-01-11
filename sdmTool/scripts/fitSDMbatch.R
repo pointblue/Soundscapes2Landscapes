@@ -19,6 +19,7 @@ option_list = list(
 		make_option(c("-i", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
 )
 
+
 ## parse the arguments 
 opt = parse_args(OptionParser(option_list=option_list))
 gitpath<-opt$g;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
