@@ -72,7 +72,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				zz <- try(dir.create(svpath),silent=T)
 				if(!inherits(zz,"try-error")){
 					restest<-"SUCCESS"
-					unlink(svpth)
+					unlink(svpath)
 				}else{
 					restest<-"FAILED - WARNING!!!"
 				}
