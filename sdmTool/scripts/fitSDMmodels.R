@@ -1,31 +1,45 @@
 # TODO: Add comment
 # 
-# Author: lsalas
+# Author: lsalas@pointblue.org
 ###############################################################################
 
+## Remove objects -- to make sure no prior session variables are in memory
+rm(list=ls(all=TRUE));gc()
+####
+
+startdttm<-format(Sys.time(), "%Y%m%d_%H%M")		#starting datetime
+write("START OF SDM MODEL FITTING RUN \n\n", file=paste0(svpth,"SDMfit_",startdttm,".log"), append=FALSE)	#open new log file
 
 ## Dependencies
-libs<-c("rminer","raster","dismo","plyr","data.table","xgboost")
-lapply(libs, require, character.only = TRUE)
-
+libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
 pathToGit<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
 svpth<-"c:/S2Ltemp/"
+####
 
-## ATTENTION: If plotting, use this command...
+## Declare the cores to use for parallelization:
+ncores<-detectCores()  #ATTENTION: replace this with the number of cores you want to use. Otherwise the algo will use all.
+cl<-makeCluster(ncores)
+registerDoParallel(cl)
+
+## ATTENTION: If plotting, you may need this command...
 #par(mar=c(1,1,1,1))
+####
 
-## Definitions
+## Modeling definitions
 ## Any one or a list of any of the following:
+## ATTENTION - we said to use only 15 or so?
 species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL", "LEGO",
 			"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
 			"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
 			"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
-
-resolution<-c("1000M") #"250M","500M",
-noise<-"noised"
-gediyrs<-"3yr"
+resolution<-c("250M","500M","1000M") #
+noise<-c("noised")
+gediyrs<-c("1yr","2yr","3yr")
+addGEDI<-c(TRUE,FALSE)
 percent.train<-0.8 	#the percent of data used to train the model
+####
 
+## Functions consider pre-compiling...?
 stratifySample<-function(df,yvar,percTrain){
 	qv<-unique(df[,yvar])
 	resdf<-ldply(.data=qv, .fun=function(q,df,yvar,percTrain){
@@ -102,11 +116,24 @@ checkSavePath<-function(svpth,rez){
 	return(reserr)
 }
 
-# Check that the folders exist in svpth and for each resolution level
-chkpth<-checkSavePath(svpth=svpth,rez=resolution)
-if(chkpth!=""){cat(chkpth)}
+fitCaseModels<-function(X){
+	sp<-X[1];rz<-X[2];nz<-X[3];yr<-X[4];gd<-X[5]
+	print(paste(sp,rz,nz,yr,gd))
+}
 
-# HERE: Loop through resolutions and species, all for the 3yr... VECTORIZE!
+####
+
+## Check that we have the path to save the files
+chkpth<-checkSavePath(svpth=svpth,rez=resolution)  # Check that the folders exist in svpth and for each resolution level
+if(chkpth!=""){
+	cat(chkpth)
+	write(paste(chkpth,"\n\n"), file=paste0(svpth,"SDMfit_",startdttm,".log"), append=TRUE)	#log this
+}
+
+
+
+results<-adply(.data=cases,.margins=1,.fun=fitCaseModels(X,...))
+
 for(zz in resolution){
 
 	#need to store in a single data frame:
