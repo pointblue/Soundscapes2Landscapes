@@ -8,15 +8,15 @@ suppressPackageStartupMessages(require(optparse))	#need to load this library fir
 
 ## describe the scritp function's batch call arguments
 option_list = list(
-		make_option(c("-t", "--testonly"), action="store_true", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE"),
+		make_option(c("-t", "--testonly"), action="store", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE"),
 		make_option(c("-g", "--gitpath"), action="store", default="/home/ubuntu/Soundscapes2Landscapes/", type="character", help="path to the git directory. Default:"),
 		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored."),
 		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored."),
 		make_option(c("-s", "--species"), action="store", default="WESJ", type="character", help="species code; e.g., WESJ (default)"),
 		make_option(c("-r", "--resolution"), action="store", default="1000M", type="character", help="spatial resolution; either 1000M (default), 500M or 250M"),
 		make_option(c("-y", "--yearspan"), action="store", default="3yr", type="character", help="year span; either 1yr, 2yr or 3yr (default)"),
-		make_option(c("-w", "--withgedi"), action="store_true", default=FALSE, type="logical", help="logical: include gedi variables? Defaults to FALSE"),
-		make_option(c("-i", "--sessinfo"), action="store_true", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
+		make_option(c("-w", "--withgedi"), action="store", default=FALSE, type="logical", help="logical: include gedi variables? Defaults to FALSE"),
+		make_option(c("-i", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE")
 )
 
 ## parse the arguments 
