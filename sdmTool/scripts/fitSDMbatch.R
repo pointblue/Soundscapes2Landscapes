@@ -59,15 +59,15 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 		}else{	#successful creating log file - start log
 			print("Starting log file and tests...", quote=FALSE)
 			## continue with tests....
-			cat("Log report testing the SDM fitting script", paste("Started", format(Sys.time(),"%Y-%m-%d %H:%M:%S")), file = zz, sep = "\n")
-			cat("\n","\n",file = zz)
+			cat("Log report testing the SDM fitting script", paste("Started", format(Sys.time(),"%Y-%m-%d %H:%M:%S")), file = zz, sep = "\n", append=TRUE)
+			cat("\n","\n",file = zz, append=TRUE)
 			
-			cat(paste("Valid git directory:",gitpath), file = zz, sep = "\n")
-			cat(paste("Found or created logs directory:",logdir), file = zz, sep = "\n")
-			cat("Testing validity of results directory:", file = zz, sep = "\n")
+			cat(paste("Valid git directory:",gitpath), file = zz, sep = "\n", append=TRUE)
+			cat(paste("Found or created logs directory:",logdir), file = zz, sep = "\n", append=TRUE)
+			cat("Testing validity of results directory:", file = zz, sep = "\n", append=TRUE)
 			#test that the results dir is there or that can create in gitpath
 			if(is.null(svpath) || !dir.exists(svpath)){	
-				cat("   Missing or invalid directory where to store results.", file = zz, sep = "\n")
+				cat("   Missing or invalid directory where to store results.", file = zz, sep = "\n", append=TRUE)
 				svpath<-paste0(gitpath,"results/")
 				zz <- try(dir.create(svpath),silent=T)
 				if(!inherits(zz,"try-error")){
@@ -76,42 +76,42 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				}else{
 					restest<-"FAILED - WARNING!!!"
 				}
-				cat(paste0("   Testing that one can be created at ",gitpath,"results/ ...",restest), file = zz, sep = "\n")
+				cat(paste0("   Testing that one can be created at ",gitpath,"results/ ...",restest), file = zz, sep = "\n", append=TRUE)
 			}else{
-				cat("   Found directory where to save results...", file = zz, sep = "\n\n")
+				cat("   Found directory where to save results...", file = zz, sep = "\n\n", append=TRUE)
 			}
 			
 			#test presence of all libraries needed
-			cat("Testing that all needed libraries are installed and can be loaded", file = zz, sep = "\n")
+			cat("Testing that all needed libraries are installed and can be loaded", file = zz, sep = "\n", append=TRUE)
 			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");libtest<-as.data.frame(sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE))
 			write.table(libtest, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
-			cat("\n","\n",file = zz)
+			cat("\n","\n",file = zz, append=TRUE)
 			
 			#report the arguments passed in the test call
-			cat("Arguments passed in script test call:", file = zz, sep = "\n")
+			cat("Arguments passed in script test call:", file = zz, sep = "\n", append=TRUE)
 			optvals<-as.data.frame(opt)
 			write.table(optvals, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
-			cat("\n","\n",file = zz)
+			cat("\n","\n",file = zz, append=TRUE)
 			
 			#test the presence of the data files
 			pth250<-paste0(gitpath,"sdmTool/data/Birds/250M/deflated_250M.RData")
 			pth500<-paste0(gitpath,"sdmTool/data/Birds/500M/deflated_500M.RData")
 			pth1000<-paste0(gitpath,"sdmTool/data/Birds/1000M/deflated_1000M.RData")
 			if(!file.exists(pth250) || !file.exists(pth500) || !file.exists(pth1000)){
-				cat("Testing presence of data files... WARNING: Some of the data files were not found", file = zz, sep = "\n")
+				cat("Testing presence of data files... WARNING: Some of the data files were not found", file = zz, sep = "\n", append=TRUE)
 			}else{
-				cat("Testing presence of data files... Found all the needed data files", file = zz, sep = "\n")
+				cat("Testing presence of data files... Found all the needed data files", file = zz, sep = "\n", append=TRUE)
 			}
 			
 			#HERE determine if running the model fitting script
 			#If so, source the sdmfit file and pre-compile the sdm fitting function
 			
 			#end the log
-			cat("\n","End of test.","\n","\n",file=zz)
+			cat("\n","End of test.","\n","\n",file=zz, append=TRUE)
 			if(sinf){
 				w<-unlist(sessionInfo())
 				tdf<-data.frame(param=names(w),value=w);row.names(tdf)<-NULL
-				cat("SessionInfo:",file=zz,sep="\n")
+				cat("SessionInfo:",file=zz,sep="\n", append=TRUE)
 				write.table(tdf, row.names = FALSE, col.names = FALSE, file=zz, append=TRUE)
 			}
 			close(zz)
