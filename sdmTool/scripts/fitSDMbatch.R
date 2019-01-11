@@ -46,7 +46,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				ldt<-1
 			}
 		}else{
-			print(paste("Found logs directory:",logdir, quote=FALSE))
+			print(paste("Found logs directory:",logdir), quote=FALSE)
 			ldt<-1
 		}
 	}else{	# valid log dir provided
@@ -55,7 +55,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 	}
 	if(ldt==1){	# have valid log dir, then... 
 		## open connection to log file
-		filen<-paste("FitSDMscriptTest",format(Sys.time(),"%Y%m%d-%H%M"),sep="_")
+		filen<-paste("FitSDMscriptTest",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
 		logfile<-paste(logdir,filen,".log",sep="")
 		zz <- try(file(logfile, "w"),silent=T)
 		if(inherits(zz,"try-error")){
@@ -74,8 +74,8 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			if(is.null(svpath) || !dir.exists(svpath)){	
 				cat("   Missing or invalid directory where to store results.", file = zz, sep = "\n", append=TRUE)
 				svpath<-paste0(gitpath,"results/")
-				zz <- try(dir.create(svpath),silent=T)
-				if(!inherits(zz,"try-error")){
+				rr <- try(dir.create(svpath),silent=T)
+				if(!inherits(rr,"try-error")){
 					restest<-"SUCCESS"
 				}else{
 					restest<-"FAILED - WARNING!!!"
