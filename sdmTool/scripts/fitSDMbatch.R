@@ -34,15 +34,17 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 }else{	#check/create the logs folder, see if we can start log for the test...
 	print("Found git directory...", quote=FALSE)
 	ldt<-0
-	if(is.null(logdir) || !dir.exists(logdir)){	#no log dir provided
+	if(is.null(logdir)){	#no log dir provided
 		logdir<-paste0(gitpath,"logs/")
-		zz <- try(dir.create(logdir),silent=T)
-		if(inherits(zz,"try-error")){	#failed to create dir
-			print("Wrong log directory path. Could not create log directory in the Soundscapes2Landscapes folder. Please check access permissions, or run test with appropriate credentials, or provide a valid path.", quote=FALSE)
-			print("No tests performed; no logs generated.", quote=FALSE)
-		}else{	#success creating log dir
-			print(paste0("No logs directory provided, so created '",gitpath,"/logs/' directory."), quote=FALSE)
-			ldt<-1
+		if(!dir.exists(logdir)){
+			zz <- try(dir.create(logdir),silent=T)
+			if(inherits(zz,"try-error")){	#failed to create dir
+				print("Wrong log directory path. Could not create log directory in the Soundscapes2Landscapes folder. Please check access permissions, or run test with appropriate credentials, or provide a valid path.", quote=FALSE)
+				print("No tests performed; no logs generated.", quote=FALSE)
+			}else{	#success creating log dir
+				print(paste0("No logs directory provided, so created '",gitpath,"logs/' directory."), quote=FALSE)
+				ldt<-1
+			}
 		}
 	}else{	# valid log dir provided
 		print("Found logs directory...", quote=FALSE)
@@ -72,7 +74,6 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				zz <- try(dir.create(svpath),silent=T)
 				if(!inherits(zz,"try-error")){
 					restest<-"SUCCESS"
-					unlink(svpath)
 				}else{
 					restest<-"FAILED - WARNING!!!"
 				}
@@ -83,7 +84,8 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#test presence of all libraries needed
 			cat("Testing that all needed libraries are installed and can be loaded", file = zz, sep = "\n", append=TRUE)
-			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");libtest<-as.data.frame(sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE))
+			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");
+			libtest<-as.data.frame(sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE));names(libtest)<-"installed"
 			write.table(libtest, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
 			
