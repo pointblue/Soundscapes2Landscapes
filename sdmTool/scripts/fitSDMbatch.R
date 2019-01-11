@@ -8,7 +8,7 @@ suppressPackageStartupMessages(require(optparse))	#need to load this library fir
 
 ## describe the scritp function's batch call arguments
 option_list = list(
-		make_option(c("-t", "--testonly"), action="store_true", default=FALSE, type="logical", help="only test that the script can run? Defaults to FALSE"),
+		make_option(c("-t", "--testonly"), action="store_true", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE"),
 		make_option(c("-g", "--gitpath"), action="store", default="/home/ubuntu/Soundscapes2Landscapes/", type="character", help="path to the git directory. Default:"),
 		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored."),
 		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored."),
@@ -96,6 +96,14 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			pth250<-paste0(gitpath,"sdmTool/data/Birds/250M/deflated_250M.RData")
 			pth500<-paste0(gitpath,"sdmTool/data/Birds/500M/deflated_500M.RData")
 			pth1000<-paste0(gitpath,"sdmTool/data/Birds/1000M/deflated_1000M.RData")
+			if(!file.exists(pth250) || !file.exists(pth500) || !file.exists(pth1000)){
+				cat("Testing presence of data files... WARNING: Some of the data files were not found", file = zz, sep = "\n")
+			}else{
+				cat("Testing presence of data files... Found all the needed data files", file = zz, sep = "\n")
+			}
+			
+			#HERE determine if running the model fitting script
+			#If so, source the sdmfit file and pre-compile the sdm fitting function
 			
 			#end the log
 			cat("\n","End of test.","\n","\n",file=zz)
