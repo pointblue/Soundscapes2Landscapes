@@ -35,8 +35,10 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 	print("Found git directory...", quote=FALSE)
 	ldt<-0
 	if(is.null(logdir)){	#no log dir provided
+		print("1") #############################################
 		logdir<-paste0(gitpath,"logs/")
 		if(!dir.exists(logdir)){
+			print("1.1") #############################################
 			zz <- try(dir.create(logdir),silent=T)
 			if(inherits(zz,"try-error")){	#failed to create dir
 				print("Wrong log directory path. Could not create log directory in the Soundscapes2Landscapes folder. Please check access permissions, or run test with appropriate credentials, or provide a valid path.", quote=FALSE)
@@ -47,10 +49,12 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			}
 		}
 	}else{	# valid log dir provided
+		print("2") #############################################
 		print("Found logs directory...", quote=FALSE)
 		ldt<-1
 	}
 	if(ldt==1){	# have valid log dir, then... 
+		print("3") #############################################
 		## open connection to log file
 		filen<-paste("FitSDMscriptTest",format(Sys.time(),"%Y%m%d-%H%M"),sep="_")
 		logfile<-paste(logdir,filen,".log",sep="")
