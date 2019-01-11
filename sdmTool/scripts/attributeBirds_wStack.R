@@ -11,7 +11,7 @@
 # use that same set of variables at all resolutions
 # merge and save
 library(raster); library(fmsb);library(plyr)
-rpth<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
+rpth<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/"
 rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
@@ -20,10 +20,9 @@ bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-"_3yr_"
 gedinoise<-"noised_"
-gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","trugrnd","truetop",
-		"rhReal2","rhReal26","rhReal50","rhReal76","rhReal98","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
 		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
-birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/"
+birdfiles<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
@@ -35,15 +34,6 @@ getCellId<-function(df,rast,rez){
 	df[,cidnam]<-cellFromXY(rast,df[,c("x","y")])
 	
 	return(df)
-}
-
-## This function crops and shifts a raster to match the other, per the specs of this project
-# rast is the raster to fix
-# dem is the correct base raster
-cropShift<-function(rast,dem,xshft,yshft){
-	rast<-crop(rast,dem)
-	rast<-shift(rast,x=xshft,y=yshft)
-	return(rast)
 }
 
 # vif_func selects covariates based on variance inflation - outputs the most informative set
@@ -121,26 +111,23 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			xshft<-ifelse(zz=="1000M",-381.2,118.8)
 			
 			# DEM_Rescaled
-			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/N38W123+124_1arc_V2_",zz,".tif")
+			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/dem_clip_",zz,".tif")
 			dem<-raster(pth)
 			stk<-dem
 			
 			# Street_Distance
 			pth<-paste0(rpth,"Street_Distance/",zz,"/StreetDistance_",zz,"_clip.tif")
 			str_dist<-raster(pth)
-			str_dist<-cropShift(rast=str_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(dem,str_dist)
 			
 			# Stream_Distance
 			pth<-paste0(rpth,"Stream_Distance/",zz,"/StreamDistance_",zz,"_clip.tif")
 			stm_dist<-raster(pth)
-			stm_dist<-cropShift(rast=stm_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(stk,stm_dist)
 			
 			# Coast_Distance
 			pth<-paste0(rpth,"Coast_Distance/",zz,"/CoastDistance_",zz,"_clip.tif")
 			cst_dist<-raster(pth)
-			cst_dist<-cropShift(rast=cst_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(stk,cst_dist)
 			
 			# DHI_MODIS = NDVI
@@ -158,7 +145,8 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				ndvinames<-c(ndvinames,nvname)
 			}
 			names(ndvistack)<-ndvinames
-			stk<-stack(stk,ndvistack)
+			stk1<-resample(ndvistack,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			# BCM
 			i<-0
@@ -180,12 +168,14 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				}
 			}
 			names(bcmstk)<-bcmstkname
-			stk<-stack(stk,bcmstk)
+			stk1<-resample(bcmstk,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			#GEDI
 			gdr<-paste0("GEDI/",gedinoise,zz)
 			gedistkname<-character(); i<-0
 			for(gg in gedivars){
+			  print(gg)
 				i<-i+1
 				pth<-paste0(rpth,gdr,"/",gedinoise,gg,gediyr,zz,".tif")
 				if(file.exists(pth)){
@@ -203,7 +193,8 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				
 			}
 			names(gedistk)<-gedistkname
-			stk<-stack(stk,gedistk)
+			stk1<-resample(gedistk,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			# Make df...
 			# raw
