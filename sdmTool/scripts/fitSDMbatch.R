@@ -10,8 +10,8 @@ suppressPackageStartupMessages(require(optparse))	#need to load this library fir
 option_list = list(
 		make_option(c("-t", "--testonly"), action="store", default=FALSE, type='logical', help="only test that the script can run? Defaults to FALSE", dest="tst"),
 		make_option(c("-g", "--gitpath"), action="store", default="/home/ubuntu/Soundscapes2Landscapes/", type="character", help="path to the git directory. Default: /home/ubuntu/Soundscapes2Landscapes/", dest="gitpath"),
-		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored. If none or invalid, attempts to create ~/gitpath/results", dest="svpath"),
-		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored. If none or invalid, attempts to create ~/gitpath/logs", dest="logdir"),
+		make_option(c("-p", "--svpath"), action="store", default=NULL, type="character", help="path to the directory where results are stored. If none or invalid, attempts to create ~/gitpath/results/", dest="svpath"),
+		make_option(c("-l", "--logdir"), action="store", default=NULL, type="character", help="path to the directory where logs are stored. If none or invalid, attempts to create ~/gitpath/logs/", dest="logdir"),
 		make_option(c("-s", "--species"), action="store", default="WESJ", type="character", help="species code; e.g., WESJ (default)", dest="spp"),
 		make_option(c("-r", "--resolution"), action="store", default="1000M", type="character", help="spatial resolution; either 1000M (default), 500M or 250M", dest="rez"),
 		make_option(c("-y", "--yearspan"), action="store", default="3yr", type="character", help="year span; either 1yr, 2yr or 3yr (default)", dest="yrsp"),
@@ -26,6 +26,10 @@ gitpath<-opt$gitpath;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitp
 svpath<-opt$svpath;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
 logdir<-opt$logdir;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
 spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$tst
+
+#debug:
+#gitpath<-"/home/ubuntu/Soundscapes2Landscapes/";svpath<-paste0(gitpath,"results/");logdir<-paste0(gitpath,"logs/")
+#spp<-"WESJ";rez<-"250M";yrsp<-"3yr";gedi<-TRUE;sinf<-FALSE;tst<-FALSE
 
 ## check that the git folder exist
 if(!dir.exists(gitpath)){	# no gitpath info - can't go further
@@ -122,12 +126,10 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				fitCaseModelCmp <- try(cmpfun(fitCaseModel,options=list(suppressAll=TRUE)),silent=T)
 				cmpflag<-1
 				if(inherits(fitCaseModelCmp,"try-error")){
-					#cat("Could not compile function: fitCaseModel. Please review the function.", file = zz, sep = "\n")
-					print("Could not compile function: fitCaseModel. Please review the function.")
+					cat("Could not compile function: fitCaseModel. Please review the function.", file = zz, sep = "\n")
 					cmpflag<-0
 				}else{
-					#cat("Successfuly compiled function: fitCaseModel", file = zz, sep = "\n")
-					print("Successfuly compiled function: fitCaseModel")
+					cat("Successfuly compiled function: fitCaseModel", file = zz, sep = "\n")
 				}
 				X<-list(gitpath=gitpath,svpath=svpath,rez=rez,spp=spp,yrsp=yrsp,gedi=gedi)
 				if(cmpflag==1){
