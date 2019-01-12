@@ -11,19 +11,18 @@
 # use that same set of variables at all resolutions
 # merge and save
 library(raster); library(fmsb);library(plyr)
-rpth<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
+rpth<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/"
 rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
 bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
-gediyr<-"_3yr_"
+gediyr<-c("_1yr_","_2yr_","_3yr_")
 gedinoise<-"noised_"
-gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","trugrnd","truetop",
-		"rhReal2","rhReal26","rhReal50","rhReal76","rhReal98","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
 		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
-birdfiles<-"//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/"
+birdfiles<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
@@ -35,15 +34,6 @@ getCellId<-function(df,rast,rez){
 	df[,cidnam]<-cellFromXY(rast,df[,c("x","y")])
 	
 	return(df)
-}
-
-## This function crops and shifts a raster to match the other, per the specs of this project
-# rast is the raster to fix
-# dem is the correct base raster
-cropShift<-function(rast,dem,xshft,yshft){
-	rast<-crop(rast,dem)
-	rast<-shift(rast,x=xshft,y=yshft)
-	return(rast)
 }
 
 # vif_func selects covariates based on variance inflation - outputs the most informative set
@@ -116,31 +106,28 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 covarInf<-NULL
-q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars){
-			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
-			xshft<-ifelse(zz=="1000M",-381.2,118.8)
+q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
+			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
+			#xshft<-ifelse(zz=="1000M",-381.2,118.8)
 			
 			# DEM_Rescaled
-			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/N38W123+124_1arc_V2_",zz,".tif")
+			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/dem_clip_",zz,".tif")
 			dem<-raster(pth)
 			stk<-dem
 			
 			# Street_Distance
 			pth<-paste0(rpth,"Street_Distance/",zz,"/StreetDistance_",zz,"_clip.tif")
 			str_dist<-raster(pth)
-			str_dist<-cropShift(rast=str_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(dem,str_dist)
 			
 			# Stream_Distance
 			pth<-paste0(rpth,"Stream_Distance/",zz,"/StreamDistance_",zz,"_clip.tif")
 			stm_dist<-raster(pth)
-			stm_dist<-cropShift(rast=stm_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(stk,stm_dist)
 			
 			# Coast_Distance
 			pth<-paste0(rpth,"Coast_Distance/",zz,"/CoastDistance_",zz,"_clip.tif")
 			cst_dist<-raster(pth)
-			cst_dist<-cropShift(rast=cst_dist,dem=dem,xshft=xshft,yshft=yshft)
 			stk<-stack(stk,cst_dist)
 			
 			# DHI_MODIS = NDVI
@@ -158,7 +145,8 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				ndvinames<-c(ndvinames,nvname)
 			}
 			names(ndvistack)<-ndvinames
-			stk<-stack(stk,ndvistack)
+			stk1<-resample(ndvistack,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			# BCM
 			i<-0
@@ -180,37 +168,43 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				}
 			}
 			names(bcmstk)<-bcmstkname
-			stk<-stack(stk,bcmstk)
+			stk1<-resample(bcmstk,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			#GEDI
 			gdr<-paste0("GEDI/",gedinoise,zz)
 			gedistkname<-character(); i<-0
 			for(gg in gedivars){
-				i<-i+1
-				pth<-paste0(rpth,gdr,"/",gedinoise,gg,gediyr,zz,".tif")
-				if(file.exists(pth)){
-					gediv<-raster(pth)
-					if(i==1){
-						gedistk<-gediv
-					}else{
-						gedistk<-stack(gedistk,gediv)
-					}
-					vnam<-paste0(gedinoise,gg,gediyr,zz)
-					gedistkname<-c(gedistkname,vnam)
-				}else{
-					print(paste("Did not find file",paste0(gedinoise,gg,gediyr,zz,".tif"),"Skipping it."))
-				}
+			  for(yy in gediyr){
+			    print(paste(gg,yy))
+			    i<-i+1
+			    pth<-paste0(rpth,gdr,"/",gedinoise,gg,yy,zz,".tif")
+			    if(file.exists(pth)){
+			      gediv<-raster(pth)
+			      if(i==1){
+			        gedistk<-gediv
+			      }else{
+			        gedistk<-stack(gedistk,gediv)
+			      }
+			      vnam<-paste0(gedinoise,gg,yy,zz)
+			      gedistkname<-c(gedistkname,vnam)
+			    }else{
+			      print(paste("Did not find file",paste0(gedinoise,gg,yy,zz,".tif"),"Skipping it."))
+			    }
+			  }
+			  
 				
 			}
 			names(gedistk)<-gedistkname
-			stk<-stack(stk,gedistk)
+			stk1<-resample(gedistk,stk,method="ngb")
+			stk<-stack(stk,stk1)
 			
 			# Make df...
 			# raw
 			covardf<-as.data.frame(stk,xy=TRUE)
 			covardf<-getCellId(df=covardf,rast=dem,rez=zz)
-			exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
-			covardf<-covardf[,which(!names(covardf) %in% exclvars)]
+			#exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
+			#covardf<-covardf[,which(!names(covardf) %in% exclvars)]
 			nccdf<-ncol(covardf)
 			
 			# scaled
@@ -219,10 +213,20 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			
 			# VIF-corrected - ASSUMING the first zz is indeed 250M
 			if(is.null(covarInf) && zz=="250M"){
-				covarInf<-vif_func(in_frame=scaledcovars)
-			}else{
-				deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
+			  #use only 3yr
+			  covnams<-names(scaledcovardf)
+			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))
+			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))
+			  subscaledcovardf<-scaledcovardf[,covnams]
+				covarInf<-vif_func(in_frame=subscaledcovardf)
+				#but after deflation, add back the equivalent 2yr and 1yr
+				gedikept<-subset(covarInf,grepl("_3yr_",covarInf))
+				gyr2keep<-gsub("_3yr_","_2yr_",gedikept)
+				gyr1keep<-gsub("_3yr_","_1yr_",gedikept)
+				covarInf<-c(covarInf,gyr2keep,gyr1keep)
 			}
+			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
+			
 			
 			# loop through each species' data and merge with the above tables 
 			for(ff in list.files(birdfiles)){
