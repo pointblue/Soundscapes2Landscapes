@@ -168,7 +168,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 	cat(paste("Loaded base grid for resolution:",resolution), file = logf, sep = "\n", append=TRUE)
 	
 	# Load the deflated bird file and filter for the loop species
-	dtpth<-paste0(pathToGit,"sdmTool/data/birds/",resolution)
+	dtpth<-paste0(pathToGit,"sdmTool/data/Birds/",resolution)
 	load(file=paste0(dtpth,"/deflated_",resolution,".RData"))	
 	cat("Loaded and preparing the corresponding bird data...", file = logf, sep = "\n", append=TRUE)
 	
