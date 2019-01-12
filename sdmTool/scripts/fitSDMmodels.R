@@ -3,23 +3,6 @@
 # Author: lsalas@pointblue.org
 ###############################################################################
 
-## Remove objects -- to make sure no prior session variables are in memory
-rm(list=ls(all=TRUE));gc()
-####
-
-startdttm<-format(Sys.time(), "%Y%m%d_%H%M")		#starting datetime
-write("START OF SDM MODEL FITTING RUN \n\n", file=paste0(svpth,"SDMfit_",startdttm,".log"), append=FALSE)	#open new log file
-
-## Dependencies
-libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
-pathToGit<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
-svpth<-"c:/S2Ltemp/"
-####
-
-## Declare the cores to use for parallelization:
-ncores<-detectCores()  #ATTENTION: replace this with the number of cores you want to use. Otherwise the algo will use all.
-cl<-makeCluster(ncores)
-registerDoParallel(cl)
 
 ## ATTENTION: If plotting, you may need this command...
 #par(mar=c(1,1,1,1))
@@ -28,15 +11,15 @@ registerDoParallel(cl)
 ## Modeling definitions
 ## Any one or a list of any of the following:
 ## ATTENTION - we said to use only 15 or so?
-species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL", "LEGO",
-			"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
-			"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
-			"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
-resolution<-c("250M","500M","1000M") #
-noise<-c("noised")
-gediyrs<-c("1yr","2yr","3yr")
-addGEDI<-c(TRUE,FALSE)
-percent.train<-0.8 	#the percent of data used to train the model
+#species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL", "LEGO",
+#			"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
+#			"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
+#			"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
+#resolution<-c("250M","500M","1000M") #
+#noise<-c("noised")
+#gediyrs<-c("1yr","2yr","3yr")
+#addGEDI<-c(TRUE,FALSE)
+#percent.train<-0.8 	#the percent of data used to train the model
 ####
 
 ## Functions consider pre-compiling...?
@@ -116,40 +99,81 @@ checkSavePath<-function(svpth,rez){
 	return(reserr)
 }
 
-fitCaseModels<-function(X){
-	sp<-X[1];rz<-X[2];nz<-X[3];yr<-X[4];gd<-X[5]
-	print(paste(sp,rz,nz,yr,gd))
+getConfusionMatrix<-function(df,np){
+	qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
+				rf=ifelse(rr[2]>=np,1,0);
+				sv=ifelse(rr[3]>=np,1,0);
+				bo=ifelse(rr[4]>=np,1,0);
+				gb=ifelse(rr[5]>=np,1,0);
+				rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo,xgbm=gb);
+						return(rdf)},np=np)
+	names(qq)<-c("observed","hprfo","hpsvm","hpboo","hxgbm")
+	krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
+	kboo<-cohen.kappa(qq[,c(1,4)]);kxgb<-cohen.kappa(qq[,c(1,5)]);
+	df<-cbind(df,qq)
+	dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
+	mdf<-data.frame(Model=c("randF","SVM","Boost","XGBM"),
+			truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0),sum(dfp$hxgbm>0)),
+			falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0),sum(dfp$hxgbm==0)),
+			trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0),sum(dfn$hxgbm==0)),
+			falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0),sum(dfn$hxgbm>0)),
+			Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa,kxgb$kappa))
+	return(mdf)
 }
 
-####
 
-## Check that we have the path to save the files
-chkpth<-checkSavePath(svpth=svpth,rez=resolution)  # Check that the folders exist in svpth and for each resolution level
-if(chkpth!=""){
-	cat(chkpth)
-	write(paste(chkpth,"\n\n"), file=paste0(svpth,"SDMfit_",startdttm,".log"), append=TRUE)	#log this
-}
-
-
-
-results<-adply(.data=cases,.margins=1,.fun=fitCaseModels(X,...))
-
-for(zz in resolution){
-
+fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
+	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
+	spcd<-X[["spp"]];gediyr<-X[["yrsp"]];addGEDI<-X[["gedi"]]
+	
+	species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL", "LEGO",
+			"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
+			"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
+			"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
+	
+	startdttm<-format(Sys.time(), "%Y%m%d_%H%M")		#starting datetime
+	cat("START OF SDM MODEL FITTING RUN", file = logf, sep = "\n\n", append=TRUE)
+	
+	## Dependencies
+	#libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab","psych","compiler")
+	#sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
+	#pathToGit<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
+	#svpth<-"c:/S2Ltemp/"
+	####
+	
+	## Declare the cores to use for parallelization:
+	#if(is.null(ncores)){ncores<-detectCores()}  
+	#cl<-makeCluster(ncores)
+	#registerDoParallel(cl)
+	####
+	
+	## Check that we have the path to save the files
+	chkpth<-checkSavePath(svpth=svpth,rez=resolution)  # Check that the folders exist in svpth and for each resolution level
+	if(chkpth!=""){
+		cat(chkpth)
+		cat(chkpth, file=logf, sep = "\n", append=TRUE)	#log this
+	}else{
+		cat("Checking the results path for needed folders... OK", file = logf, sep = "\n", append=TRUE)
+	}
+	
+	####
+	
 	#need to store in a single data frame:
 	# species, resolution, model, top10 vars, and their value
-	topvars<-data.frame()
+	#topvars<-data.frame()
 	
 	#get the base grid for this resolution
-	basegrid<-raster(paste0(pathToGit,"Coast_Distance/",zz,"/CoastDIstance_",zz,"_Clip.tif"))
+	basegrid<-raster(paste0(pathToGit,"sdmTool/data/Coast_Distance/",resolution,"/CoastDIstance_",resolution,"_Clip.tif"))
 	basegrid[]<-NA
+	cat(paste("Loaded base grid for resolution:",resolution), file = logf, sep = "\n", append=TRUE)
 	
 	# Load the deflated bird file and filter for the loop species
-	dtpth<-paste0(pathToGit,"birds/",zz)
-	load(file=paste0(dtpth,"/deflated_",zz,".RData"))	
+	dtpth<-paste0(pathToGit,"sdmTool/data/birds/",resolution)
+	load(file=paste0(dtpth,"/deflated_",resolution,".RData"))	
+	cat("Loaded and preparing the corresponding bird data...", file = logf, sep = "\n", append=TRUE)
 	
-	for(spcd in species){
-
+	#for(spcd in species){
+		
 		#select only the desired species from the data
 		omitspecies<-subset(species,species!=spcd)
 		omitnumdet<-paste0("NumDet",omitspecies)
@@ -162,13 +186,26 @@ for(zz in resolution){
 								!names(deflatedcovardf) %in% c(spcd,paste0("NumDet",spcd)))]
 		predgriddf<-na.omit(predgriddf)
 		#will need this too...
-		xydf<-deflatedcovardf[,c("x","y",paste0("gId",zz))];names(xydf)<-c("x","y","cellId")
-
-		# Then fit the stack, predict, and save the wighted average of all models
-		spdata<-spdata[,which(!names(spdata) %in% c("x","y",paste0("gId",zz)))]
+		xydf<-deflatedcovardf[,c("x","y",paste0("gId",resolution))];names(xydf)<-c("x","y","cellId")
 		
-		#Need to vectorize this LEO!
+		# Get the species data fr the right gediyr, and to include/exclude gedi
+		spdata<-spdata[,which(!names(spdata) %in% c("x","y",paste0("gId",resolution)))]
+		namspdat<-names(spdata)
+		exclgedi<-subset(namspdat,grepl("_3yr_",namspdat) | grepl("_2yr_",namspdat) | grepl("_1yr_",namspdat))
+		if(addGEDI==FALSE){
+			spdata<-spdata[,which(!names(spdata) %in% exclgedi)]
+			addgn<-"_noGEDI"
+		}else{
+			exclgedi<-subset(exclgedi,!grepl(gediyr,exclgedi))
+			if(NROW(exclgedi)>0){spdata<-spdata[,which(!names(spdata) %in% exclgedi)]}
+			addgn<-"_withGEDI"
+		}
+		cat("Dataset ready. Attempt model fitting... ", file = logf, sep = "\n", append=TRUE)
+		
+		# Then fit the stack, predict, and save the wighted average of all models   Need to vectorize this LEO!
 		if(sum(spdata[,spcd]==1)>0.05*nrow(spdata)){
+			cat("Dataset has > 5% of cells with presence", file = logf, sep = "\n", append=TRUE)
+			
 			names(spdata)<-gsub(spcd,"PresAbs",names(spdata))
 			spdata$PresAbs_f<-as.factor(as.character(spdata$PresAbs))
 			
@@ -188,8 +225,10 @@ for(zz in resolution){
 			boom<-fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit)
 			xgbm<-try(fitXGB(trainset,testset,predgriddf),silent=TRUE)
 			
+			cat("Some or all models were fitted. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
+			
 			## predicting to stack
-			preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",zz)]))
+			preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",resolution)]))
 			prfom<-as.data.frame(predict(rfom,predgriddf))
 			preds$vrfom<-as.numeric(prfom[,2])
 			psvmm<-as.data.frame(predict(svmm,predgriddf))
@@ -211,11 +250,13 @@ for(zz in resolution){
 			}
 			
 			## individual model support is then:
-			supp<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
-			mv<-ceiling(max(supp));supp<-mv-supp
+			rmse<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
+			mv<-ceiling(max(rmse));supp<-mv-rmse
+			#get the confusion matrix params too
+			gofMetrics<-getConfusionMatrix(test,naivePrev)
+			gofMetrics$RMSE<-rmse;gofMetrics$support<-supp
 			
-			save(trainset,testset,test,supp,rfom,svmm,boom,xgbm, file=paste0(svpth,zz,"/",spcd,"_",zz,"_modelResults.RData"))
-			
+			cat("Creating rasters...", file = logf, sep = "\n", append=TRUE)
 			## convert predicted values to logits...
 			#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
 			preds<-data.table(preds)
@@ -227,7 +268,7 @@ for(zz in resolution){
 			## and weighted average is...
 			ssup<-sum(supp)
 			preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
-			## convert it back to probabilities...
+			## convert weighted back to probabilities...
 			preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
 			
 			## convert to raster and plot...
@@ -236,18 +277,17 @@ for(zz in resolution){
 			preds$cid<-cellFromXY(basegrid,preds[,c("x","y")])
 			cid<-preds$cid;vals<-as.numeric(preds$weighted)
 			rastres[cid]<-vals
-			plot(rastres)
-			writeRaster(rastres,filename=paste0(svpth,zz,"/",spcd,"_",zz,"_probPresence.tif",sep=""),format="GTiff",overwrite=T)
+			writeRaster(rastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_probPresence.tif",sep=""),format="GTiff",overwrite=T)
 			
 			## let's hurdle it by the naive prevalence...
 			preds[,presence:=ifelse(weighted<=naivePrev,0,1),]
 			trastres<-basegrid
 			vals<-as.numeric(preds$presence)
 			trastres[cid]<-vals
-			plot(trastres)
 			## write as geotiff
-			writeRaster(trastres,filename=paste0(svpth,zz,"/",spcd,"_",zz,"_hurdle.tif",sep=""),format="GTiff",overwrite=T)
+			writeRaster(trastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_hurdle.tif",sep=""),format="GTiff",overwrite=T)
 			
+			cat("Calculating variable importance...", file = logf, sep = "\n", append=TRUE)
 			#compile variable importance-top 10
 			imptemp<-data.frame()
 			impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)
@@ -258,20 +298,26 @@ for(zz in resolution){
 			impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
 			imptemp<-rbind(imptemp,impxgb)
 			imptemp<-getVarMetaClass(df=imptemp)
-			imptemp$Species<-spcd;imptemp$Resolution<-zz
+			imptemp$Species<-spcd;imptemp$Resolution<-resolution
 			
-			topvars<-rbind(topvars,imptemp)
+			cat("Saving results, wrapping up ...", file = logf, sep = "\n", append=TRUE)
+			save(trainset,testset,test,gofMetrics,rfom,svmm,boom,xgbm,imptemp, file=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_modelResults.RData"))
+			#topvars<-rbind(topvars,imptemp)
 			
-			print(paste("Done with",spcd,"at resolution",zz))
+			cat(paste0("Done with ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn), file = logf, sep = "\n", append=TRUE)
+			res<-paste0("Done with ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn)
 			
 		}else{
-			print(paste("Skipping",spcd,"at resolution",zz,"because of <5% of sites have presence."))
+			cat(paste0("Skipping ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn," because of <5% of sites have presence."), file = logf, sep = "\n", append=TRUE)
+			res<-paste0("Skipping ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn," because of <5% of sites have presence.")
 		}
 		
-	}
-	save(topvars,file=paste0(svpth,zz,"/topVariables_",zz,".RData"))
+	#}
+	#save(topvars,file=paste0(svpth,resolution,"/topVariables_",resolution,".RData"))
+	
 }
 
+####
 
 
 
