@@ -18,7 +18,7 @@ bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
 bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
-gediyr<-"_3yr_"
+gediyr<-c("_1yr_","_2yr_","_3yr_")
 gedinoise<-"noised_"
 gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
 		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
@@ -106,9 +106,9 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 covarInf<-NULL
-q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars){
-			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
-			xshft<-ifelse(zz=="1000M",-381.2,118.8)
+q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
+			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
+			#xshft<-ifelse(zz=="1000M",-381.2,118.8)
 			
 			# DEM_Rescaled
 			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/dem_clip_",zz,".tif")
@@ -175,21 +175,24 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			gdr<-paste0("GEDI/",gedinoise,zz)
 			gedistkname<-character(); i<-0
 			for(gg in gedivars){
-			  print(gg)
-				i<-i+1
-				pth<-paste0(rpth,gdr,"/",gedinoise,gg,gediyr,zz,".tif")
-				if(file.exists(pth)){
-					gediv<-raster(pth)
-					if(i==1){
-						gedistk<-gediv
-					}else{
-						gedistk<-stack(gedistk,gediv)
-					}
-					vnam<-paste0(gedinoise,gg,gediyr,zz)
-					gedistkname<-c(gedistkname,vnam)
-				}else{
-					print(paste("Did not find file",paste0(gedinoise,gg,gediyr,zz,".tif"),"Skipping it."))
-				}
+			  for(yy in gediyr){
+			    print(paste(gg,yy))
+			    i<-i+1
+			    pth<-paste0(rpth,gdr,"/",gedinoise,gg,yy,zz,".tif")
+			    if(file.exists(pth)){
+			      gediv<-raster(pth)
+			      if(i==1){
+			        gedistk<-gediv
+			      }else{
+			        gedistk<-stack(gedistk,gediv)
+			      }
+			      vnam<-paste0(gedinoise,gg,yy,zz)
+			      gedistkname<-c(gedistkname,vnam)
+			    }else{
+			      print(paste("Did not find file",paste0(gedinoise,gg,yy,zz,".tif"),"Skipping it."))
+			    }
+			  }
+			  
 				
 			}
 			names(gedistk)<-gedistkname
@@ -200,8 +203,8 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			# raw
 			covardf<-as.data.frame(stk,xy=TRUE)
 			covardf<-getCellId(df=covardf,rast=dem,rez=zz)
-			exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
-			covardf<-covardf[,which(!names(covardf) %in% exclvars)]
+			#exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
+			#covardf<-covardf[,which(!names(covardf) %in% exclvars)]
 			nccdf<-ncol(covardf)
 			
 			# scaled
@@ -210,10 +213,20 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			
 			# VIF-corrected - ASSUMING the first zz is indeed 250M
 			if(is.null(covarInf) && zz=="250M"){
-				covarInf<-vif_func(in_frame=scaledcovars)
-			}else{
-				deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
+			  #use only 3yr
+			  covnams<-names(scaledcovardf)
+			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))
+			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))
+			  subscaledcovardf<-scaledcovardf[,covnams]
+				covarInf<-vif_func(in_frame=subscaledcovardf)
+				#but after deflation, add back the equivalent 2yr and 1yr
+				gedikept<-subset(covarInf,grepl("_3yr_",covarInf))
+				gyr2keep<-gsub("_3yr_","_2yr_",gedikept)
+				gyr1keep<-gsub("_3yr_","_1yr_",gedikept)
+				covarInf<-c(covarInf,gyr2keep,gyr1keep)
 			}
+			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
+			
 			
 			# loop through each species' data and merge with the above tables 
 			for(ff in list.files(birdfiles)){
