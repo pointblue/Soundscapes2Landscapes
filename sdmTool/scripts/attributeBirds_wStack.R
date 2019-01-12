@@ -11,7 +11,7 @@
 # use that same set of variables at all resolutions
 # merge and save
 library(raster); library(fmsb);library(plyr)
-rpth<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/"
+rpth<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
 rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
@@ -22,7 +22,7 @@ gediyr<-c("_1yr_","_2yr_","_3yr_")
 gedinoise<-"noised_"
 gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
 		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
-birdfiles<-"A:/project/citizen_science/github/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
+birdfiles<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
@@ -106,9 +106,11 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 covarInf<-NULL
-q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
+q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles,covarInf){
 			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
 			#xshft<-ifelse(zz=="1000M",-381.2,118.8)
+			
+			svpth<-paste0(rpth,"birds/",zz,"/")
 			
 			# DEM_Rescaled
 			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/dem_clip_",zz,".tif")
@@ -176,7 +178,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			gedistkname<-character(); i<-0
 			for(gg in gedivars){
 			  for(yy in gediyr){
-			    print(paste(gg,yy))
+			    #print(paste(gg,yy))
 			    i<-i+1
 			    pth<-paste0(rpth,gdr,"/",gedinoise,gg,yy,zz,".tif")
 			    if(file.exists(pth)){
@@ -212,11 +214,12 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			scaledcovardf<-cbind(scaledcovars,covardf[,c(1:2,nccdf)])
 			
 			# VIF-corrected - ASSUMING the first zz is indeed 250M
-			if(is.null(covarInf) && zz=="250M"){
+			if(zz=="250M"){
 			  #use only 3yr
 			  covnams<-names(scaledcovardf)
-			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))
-			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))
+			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 3yr GEDI covariates
+			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
+			  covnams<-subset(covnams,!grepl("noised_VCFothr_",covnams))			#need to remove this because it does not exist at higher resolutions
 			  subscaledcovardf<-scaledcovardf[,covnams]
 				covarInf<-vif_func(in_frame=subscaledcovardf)
 				#but after deflation, add back the equivalent 2yr and 1yr
@@ -224,6 +227,11 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				gyr2keep<-gsub("_3yr_","_2yr_",gedikept)
 				gyr1keep<-gsub("_3yr_","_1yr_",gedikept)
 				covarInf<-c(covarInf,gyr2keep,gyr1keep)
+				save(covarInf, file=paste0(rpth,"birds/covarInf.RData"))
+			}else{	#load the 250M covar selected
+				load(paste0(rpth,"birds/covarInf.RData"))
+				covarInf<-gsub("250M",zz,covarInf)
+				print(NROW(covarInf))
 			}
 			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
 			
@@ -245,13 +253,13 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				scaledcovardf<-merge(scaledcovardf,bdf,by=gidfld,all.x=T)
 				deflatedcovardf<-merge(deflatedcovardf,bdf,by=gidfld,all.x=T)
 			}
-			# save
-			svpth<-paste0(rpth,"birds/",zz)
-			save(covardf,file=paste0(svpth,"/unscaled_",zz,".RData"))
-			save(scaledcovardf,file=paste0(svpth,"/scaled_",zz,".RData"))
-			save(deflatedcovardf,file=paste0(svpth,"/deflated_",zz,".RData"))
 			
-		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods,gediyr=gediyr,gedinoise=gedinoise,gedivars=gedivars,birdfiles=birdfiles)
+			# save
+			save(covardf,file=paste0(svpth,"unscaled_",zz,".RData"))
+			save(scaledcovardf,file=paste0(svpth,"scaled_",zz,".RData"))
+			save(deflatedcovardf,file=paste0(svpth,"deflated_",zz,".RData"))
+			
+		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods,gediyr=gediyr,gedinoise=gedinoise,gedivars=gedivars,birdfiles=birdfiles,covarInf=covarInf)
 
 Sys.time()-tm
 

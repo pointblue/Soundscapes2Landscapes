@@ -92,7 +92,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#test presence of all libraries needed
 			cat("Testing that all needed libraries are installed and can be loaded", file = zz, sep = "\n", append=TRUE)
-			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab");
+			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab","psych","compiler");
 			libtest<-as.data.frame(sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE));names(libtest)<-"installed"
 			write.table(libtest, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
@@ -117,6 +117,31 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#HERE determine if running the model fitting script (testonly=FALSE)
 			#If so, source the sdmfit file and pre-compile the sdm fitting function
+			if(tst==FALSE){		#execute fitSDMmodels::fitCaseModel
+				source(paste0(gitpath,"sdmTool/scripts/fitSDMmodels.R"))
+				fitCaseModelCmp <- try(cmpfun(fitCaseModel,options=list(suppressAll=TRUE)),silent=T)
+				cmpflag<-1
+				if(inherits(fitCaseModelCmp,"try-error")){
+					#cat("Could not compile function: fitCaseModel. Please review the function.", file = zz, sep = "\n")
+					print("Could not compile function: fitCaseModel. Please review the function.")
+					cmpflag<-0
+				}else{
+					#cat("Successfuly compiled function: fitCaseModel", file = zz, sep = "\n")
+					print("Successfuly compiled function: fitCaseModel")
+				}
+				X<-list(gitpath=gitpath,svpath=svpath,rez=rez,spp=spp,yrsp=yrsp,gedi=gedi)
+				if(cmpflag==1){
+					res<-fitCaseModelCmp(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
+				}else{
+					res<-fitCaseModel(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
+				}
+
+				
+			}else{
+				cat("Not performing a model fit - just testing requirements", file = zz, sep = "\n", append=TRUE)
+				res<-"No model fit requested"
+			}
+			###
 			
 			#end the log
 			cat("\n","End of test.","\n","\n",file=zz, append=TRUE)
@@ -129,7 +154,8 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			}
 			close(zz)
 			
-			print(paste("Tests completed. Check file",logfile,"for results"), quote=FALSE)
+			print(res)
+			print(paste("Batch call completed. Check file",logfile,"for results"), quote=FALSE)
 			
 		}
 	}
