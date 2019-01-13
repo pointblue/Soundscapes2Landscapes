@@ -100,24 +100,44 @@ checkSavePath<-function(svpth,rez){
 }
 
 getConfusionMatrix<-function(df,np){
-	qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
-				rf=ifelse(rr[2]>=np,1,0);
-				sv=ifelse(rr[3]>=np,1,0);
-				bo=ifelse(rr[4]>=np,1,0);
-				gb=ifelse(rr[5]>=np,1,0);
-				rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo,xgbm=gb);
-						return(rdf)},np=np)
-	names(qq)<-c("observed","hprfo","hpsvm","hpboo","hxgbm")
-	krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
-	kboo<-cohen.kappa(qq[,c(1,4)]);kxgb<-cohen.kappa(qq[,c(1,5)]);
-	df<-cbind(df,qq)
-	dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
-	mdf<-data.frame(Model=c("randF","SVM","Boost","XGBM"),
-			truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0),sum(dfp$hxgbm>0)),
-			falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0),sum(dfp$hxgbm==0)),
-			trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0),sum(dfn$hxgbm==0)),
-			falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0),sum(dfn$hxgbm>0)),
-			Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa,kxgb$kappa))
+	if(ncol(df)==5){
+		qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
+					rf=ifelse(rr[2]>=np,1,0);
+					sv=ifelse(rr[3]>=np,1,0);
+					bo=ifelse(rr[4]>=np,1,0);
+					gb=ifelse(rr[5]>=np,1,0);
+					rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo,xgbm=gb);
+					return(rdf)},np=np)
+		names(qq)<-c("observed","hprfo","hpsvm","hpboo","hxgbm")
+		krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
+		kboo<-cohen.kappa(qq[,c(1,4)]);kxgb<-cohen.kappa(qq[,c(1,5)])
+		df<-cbind(df,qq)
+		dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
+		mdf<-data.frame(Model=c("randF","SVM","Boost","XGBM"),
+				truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0),sum(dfp$hxgbm>0)),
+				falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0),sum(dfp$hxgbm==0)),
+				trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0),sum(dfn$hxgbm==0)),
+				falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0),sum(dfn$hxgbm>0)),
+				Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa,kxgb$kappa))
+	}else{
+		qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
+					rf=ifelse(rr[2]>=np,1,0);
+					sv=ifelse(rr[3]>=np,1,0);
+					bo=ifelse(rr[4]>=np,1,0);
+					rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo);
+					return(rdf)},np=np)
+		names(qq)<-c("observed","hprfo","hpsvm","hpboo")
+		krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
+		kboo<-cohen.kappa(qq[,c(1,4)])
+		df<-cbind(df,qq)
+		dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
+		mdf<-data.frame(Model=c("randF","SVM","Boost"),
+				truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0)),
+				falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0)),
+				trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0)),
+				falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0)),
+				Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa))
+	}
 	return(mdf)
 }
 
@@ -263,11 +283,17 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]
 			preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]
 			preds[,lgvboom:=log(vboom)-log(1-vboom),]
-			preds[,lgvxgbm:=log(vxgbm)-log(1-vxgbm),]
+			if(!inherits(xgbm,"try-error")){
+				preds[,lgvxgbm:=log(vxgbm)-log(1-vxgbm),]
+			}
 			
 			## and weighted average is...
 			ssup<-sum(supp)
-			preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
+			if(!inherits(xgbm,"try-error")){
+				preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
+			}else{
+				preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[5:7])%*%supp/ssup,supp=supp,ssup=ssup),]
+			}
 			## convert weighted back to probabilities...
 			preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
 			
@@ -293,10 +319,12 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)
 			imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)
 			impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)
-			impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
-			impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
-			impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
-			imptemp<-rbind(imptemp,impxgb)
+			if(!inherits(xgbm,"try-error")){
+				impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
+				impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
+				impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
+				imptemp<-rbind(imptemp,impxgb)
+			}
 			imptemp<-getVarMetaClass(df=imptemp)
 			imptemp$Species<-spcd;imptemp$Resolution<-resolution
 			
