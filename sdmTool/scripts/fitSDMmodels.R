@@ -238,7 +238,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			
 			## fitting  models
 			nc<-ncol(trainset)-4
-			fmlf<-paste("PresAbs_f~",paste(names(trainset[1:nc]),collapse="+"),sep="")
+			fmlf<-paste("PresAbs_f~",paste(names(trainset[1:nc]),collapse="+"),sep=" ")
 			fmln<-paste("PresAbs~",paste(names(trainset[3:nc]),collapse="+"),sep="")
 			svmm<-fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2)
 			rfom<-fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE)
@@ -249,6 +249,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			
 			## predicting to stack
 			preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",resolution)]))
+			predgriddf<-predgriddf[,names(predgriddf)[which(names(predgriddf) %in% names(trainset))]]
 			prfom<-as.data.frame(predict(rfom,predgriddf))
 			preds$vrfom<-as.numeric(prfom[,2])
 			psvmm<-as.data.frame(predict(svmm,predgriddf))
