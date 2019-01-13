@@ -164,11 +164,13 @@ getPredicted<-function(preds,predgriddf,test,rfom,svmm,boom,xgbm){
 		preds$vxgbm<-xgbm$predgrid
 		test$xgbm<-xgbm$predtest
 	}
-	resturn(list(preds=preds,test=test))
+	return(list(preds=preds,test=test))
 	
 }
 
 fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
+	logf<-zz;ncores=NULL;percent.train=0.8;noise="noised"
+	
 	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
 	spcd<-X[["spp"]];gediyr<-X[["yrsp"]];addGEDI<-X[["gedi"]]
 	
