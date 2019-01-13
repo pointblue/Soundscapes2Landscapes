@@ -141,6 +141,32 @@ getConfusionMatrix<-function(df,np){
 	return(mdf)
 }
 
+getPredicted<-function(preds,predgriddf,test,rfom,svmm,boom,xgbm){
+	if(!inherits(rfom,"try-error")){
+		prfom<-as.data.frame(predict(rfom,predgriddf))
+		preds$vrfom<-as.numeric(prfom[,2])
+		trfom<-as.data.frame(predict(rfom,testset))
+		test$prfo<-as.numeric(trfom[,2])
+	}
+	if(!inherits(svmm,"try-error")){
+		psvmm<-as.data.frame(predict(svmm,predgriddf))
+		preds$vsvmm<-as.numeric(psvmm[,2])
+		tsvmm<-as.data.frame(predict(svmm,testset))
+		test$psvm<-as.numeric(tsvmm[,2])
+	}
+	if(!inherits(boom,"try-error")){
+		pboom<-as.data.frame(predict(boom,predgriddf))
+		preds$vboom<-as.numeric(pboom[,2])
+		tboom<-as.data.frame(predict(boom,testset))
+		test$pboo<-as.numeric(tboom[,2])
+	}
+	if(!inherits(xgbm,"try-error")){
+		preds$vxgbm<-xgbm$predgrid
+		test$xgbm<-xgbm$predtest
+	}
+	resturn(list(preds=preds,test=test))
+	
+}
 
 fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
@@ -240,98 +266,88 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			nc<-ncol(trainset)-4
 			fmlf<-paste("PresAbs_f~",paste(names(trainset[1:nc]),collapse="+"),sep=" ")
 			fmln<-paste("PresAbs~",paste(names(trainset[3:nc]),collapse="+"),sep="")
-			svmm<-fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2)
-			rfom<-fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE)
-			boom<-fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit)
+			svmm<-try(fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2),silent=TRUE)
+			rfom<-try(fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE),silent=TRUE)
+			boom<-try(fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit),silent=TRUE)
 			xgbm<-try(fitXGB(trainset,testset,predgriddf),silent=TRUE)
 			
-			cat("Some or all models were fitted. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
-			
-			## predicting to stack
-			preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",resolution)]))
-			predgriddf<-predgriddf[,names(predgriddf)[which(names(predgriddf) %in% names(trainset))]]
-			prfom<-as.data.frame(predict(rfom,predgriddf))
-			preds$vrfom<-as.numeric(prfom[,2])
-			psvmm<-as.data.frame(predict(svmm,predgriddf))
-			preds$vsvmm<-as.numeric(psvmm[,2])
-			pboom<-as.data.frame(predict(boom,predgriddf))
-			preds$vboom<-as.numeric(pboom[,2])
-			if(!inherits(xgbm,"try-error")){preds$vxgbm<-xgbm$predgrid}
-			
-			## predict to test set and eval the rmse
-			test<-data.frame(observed=testset[,"PresAbs"])
-			trfom<-as.data.frame(predict(rfom,testset))
-			test$prfo<-as.numeric(trfom[,2])
-			tsvmm<-as.data.frame(predict(svmm,testset))
-			test$psvm<-as.numeric(tsvmm[,2])
-			tboom<-as.data.frame(predict(boom,testset))
-			test$pboo<-as.numeric(tboom[,2])
-			if(!inherits(xgbm,"try-error")){
-				test$xgbm<-xgbm$predtest
-			}
-			
-			## individual model support is then:
-			rmse<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
-			mv<-ceiling(max(rmse));supp<-mv-rmse
-			#get the confusion matrix params too
-			gofMetrics<-getConfusionMatrix(test,naivePrev)
-			gofMetrics$RMSE<-rmse;gofMetrics$support<-supp
-			
-			cat("Creating rasters...", file = logf, sep = "\n", append=TRUE)
-			## convert predicted values to logits...
-			#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
-			preds<-data.table(preds)
-			preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]
-			preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]
-			preds[,lgvboom:=log(vboom)-log(1-vboom),]
-			if(!inherits(xgbm,"try-error")){
-				preds[,lgvxgbm:=log(vxgbm)-log(1-vxgbm),]
-			}
-			
-			## and weighted average is...
-			ssup<-sum(supp)
-			if(!inherits(xgbm,"try-error")){
-				preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
+			if(inherits(rfom,"try-error") && inherits(rfom,"try-error") && inherits(rfom,"try-error") && inherits(rfom,"try-error")){
+				cat("None of the models attempted was able to converge and fit", file = logf, sep = "\n", append=TRUE)
 			}else{
-				preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[5:7])%*%supp/ssup,supp=supp,ssup=ssup),]
+				cat("Some or all models were fitted. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
+				
+				## predicting to test and to grid 
+				preds<-data.frame(cellId=as.integer(predgriddf[,paste0("gId",resolution)]))
+				predgriddf<-predgriddf[,names(predgriddf)[which(names(predgriddf) %in% names(trainset))]]
+				test<-data.frame(observed=testset[,"PresAbs"])
+				
+				## predict to test set and eval the rmse
+				predres<-getPredicted(preds=preds,predgriddf=predgriddf,test=test,rfom=rfom,svmm=svmm,boom=boom,xgbm=xgbm)
+				preds<-predres$preds
+				test<-predres$test
+				
+				## individual model support is then:
+				rmse<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
+				mv<-ceiling(max(rmse));supp<-mv-rmse
+				#get the confusion matrix params too
+				gofMetrics<-getConfusionMatrix(test,naivePrev)
+				gofMetrics$RMSE<-rmse;gofMetrics$support<-supp
+				
+				cat("Creating rasters...", file = logf, sep = "\n", append=TRUE)
+				## convert predicted values to logits...
+				#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
+				preds<-data.table(preds)
+				if(!inherits(rfom,"try-error")){preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]}
+				if(!inherits(svmm,"try-error")){preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]}
+				if(!inherits(boom,"try-error")){preds[,lgvboom:=log(vboom)-log(1-vboom),]}
+				if(!inherits(xgbm,"try-error")){preds[,lgvxgbm:=log(vxgbm)-log(1-vxgbm),]}
+				
+				## and weighted average is...3=3; 5=4:5; 7=5:7 9=6:9
+				ssup<-sum(supp)
+				if(!inherits(xgbm,"try-error")){
+					preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
+				}else{
+					preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[5:7])%*%supp/ssup,supp=supp,ssup=ssup),]
+				}
+				## convert weighted back to probabilities...
+				preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
+				
+				## convert to raster and plot...
+				rastres<-basegrid
+				preds<-merge(preds,xydf,by="cellId",all.x=T)
+				preds$cid<-cellFromXY(basegrid,preds[,c("x","y")])
+				cid<-preds$cid;vals<-as.numeric(preds$weighted)
+				rastres[cid]<-vals
+				writeRaster(rastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_probPresence.tif",sep=""),format="GTiff",overwrite=T)
+				
+				## let's hurdle it by the naive prevalence...
+				preds[,presence:=ifelse(weighted<=naivePrev,0,1),]
+				trastres<-basegrid
+				vals<-as.numeric(preds$presence)
+				trastres[cid]<-vals
+				## write as geotiff
+				writeRaster(trastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_hurdle.tif",sep=""),format="GTiff",overwrite=T)
+				
+				cat("Calculating variable importance...", file = logf, sep = "\n", append=TRUE)
+				#compile variable importance-top 10
+				imptemp<-data.frame()
+				impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)
+				imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)
+				impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)
+				if(!inherits(xgbm,"try-error")){
+					impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
+					impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
+					impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
+					imptemp<-rbind(imptemp,impxgb)
+				}
+				imptemp<-getVarMetaClass(df=imptemp)
+				imptemp$Species<-spcd;imptemp$Resolution<-resolution
+				
+				cat("Saving results, wrapping up ...", file = logf, sep = "\n", append=TRUE)
+				save(trainset,testset,test,gofMetrics,rfom,svmm,boom,xgbm,imptemp, file=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_modelResults.RData"))
+				#topvars<-rbind(topvars,imptemp)
+				
 			}
-			## convert weighted back to probabilities...
-			preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
-			
-			## convert to raster and plot...
-			rastres<-basegrid
-			preds<-merge(preds,xydf,by="cellId",all.x=T)
-			preds$cid<-cellFromXY(basegrid,preds[,c("x","y")])
-			cid<-preds$cid;vals<-as.numeric(preds$weighted)
-			rastres[cid]<-vals
-			writeRaster(rastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_probPresence.tif",sep=""),format="GTiff",overwrite=T)
-			
-			## let's hurdle it by the naive prevalence...
-			preds[,presence:=ifelse(weighted<=naivePrev,0,1),]
-			trastres<-basegrid
-			vals<-as.numeric(preds$presence)
-			trastres[cid]<-vals
-			## write as geotiff
-			writeRaster(trastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_hurdle.tif",sep=""),format="GTiff",overwrite=T)
-			
-			cat("Calculating variable importance...", file = logf, sep = "\n", append=TRUE)
-			#compile variable importance-top 10
-			imptemp<-data.frame()
-			impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)
-			imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)
-			impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)
-			if(!inherits(xgbm,"try-error")){
-				impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
-				impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
-				impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
-				imptemp<-rbind(imptemp,impxgb)
-			}
-			imptemp<-getVarMetaClass(df=imptemp)
-			imptemp$Species<-spcd;imptemp$Resolution<-resolution
-			
-			cat("Saving results, wrapping up ...", file = logf, sep = "\n", append=TRUE)
-			save(trainset,testset,test,gofMetrics,rfom,svmm,boom,xgbm,imptemp, file=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_modelResults.RData"))
-			#topvars<-rbind(topvars,imptemp)
 			
 			cat(paste0("Done with ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn), file = logf, sep = "\n", append=TRUE)
 			res<-paste0("Done with ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn)
