@@ -280,17 +280,20 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				test<-data.frame(observed=testset[,"PresAbs"])
 				
 				## predict to test set and eval the rmse
+				print("Predicting")
 				predres<-getPredicted(preds=preds,predgriddf=predgriddf,test=test,testset=testset,rfom=rfom,svmm=svmm,boom=boom,xgbm=xgbm)
 				preds<-predres$preds
 				test<-predres$test
 				
 				## individual model support is then:
+				print("GOF")
 				rmse<-apply(test[,2:ncol(test)],2,FUN=function(x,obs)sqrt(sum((x-obs)^2)/NROW(x)),obs=test$observed)
 				mv<-ceiling(max(rmse));supp<-mv-rmse
 				#get the confusion matrix params too
 				gofMetrics<-getConfusionMatrix(test,naivePrev)
 				gofMetrics$RMSE<-rmse;gofMetrics$support<-supp
 				
+				print("Rasterizing")
 				cat("Creating rasters...", file = logf, sep = "\n", append=TRUE)
 				## convert predicted values to logits...
 				#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
@@ -326,6 +329,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				writeRaster(trastres,filename=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_hurdle.tif",sep=""),format="GTiff",overwrite=T)
 				
 				cat("Calculating variable importance...", file = logf, sep = "\n", append=TRUE)
+				print("Variable importance")
 				#compile variable importance-top 10
 				importance<-getVariableImportance(rfom,svmm,boom,xgbm,trainset)
 				importance<-getVarMetaClass(df=importance)
