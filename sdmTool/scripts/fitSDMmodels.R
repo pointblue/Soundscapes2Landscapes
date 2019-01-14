@@ -26,8 +26,10 @@
 stratifySample<-function(df,yvar,percTrain){
 	qv<-unique(df[,yvar])
 	resdf<-ldply(.data=qv, .fun=function(q,df,yvar,percTrain){
-				tdf<-subset(df,df[,yvar]==q);nva<-nrow(tdf);
-				tdf$inOut<-rbinom(nva,1,percTrain);
+				tdf<-subset(df,PresAbs_f==q);nva<-nrow(tdf);tdf$rown<-1:nva;
+				smp<-sample(x=1:nva,size=floor(nva*percTrain));
+				tdf$inOut<-ifelse(tdf$rown %in% smp,1,0);
+				tdf<-tdf[,names(tdf)!="rown"];
 				return(tdf)			
 			},df=df,yvar=yvar,percTrain=percTrain)
 	return(resdf)
