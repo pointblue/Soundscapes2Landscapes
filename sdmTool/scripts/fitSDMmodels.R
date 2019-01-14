@@ -121,11 +121,11 @@ getConfusionMatrix<-function(df,np){
 	}
 	df<-cbind(df,qq)
 	dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
-	mdf<-data.frame()
+	mdf<-data.frame();naqq<-names(qq)
 	for(cc in 1:ncol(qq)){
-		vnm<-names(qq)[cc]
-		ccnam<-ifelse(vnm=="hprfo","randF",ifelse(vnm<-names(qq)[cc]=="hpsvm","SVM",ifelse(vnm<-names(qq)[cc]=="hpboo","Boost","XGBM")))
-		truePos=sum(dfp[,vnm]>0);falsePos=sum(dfp[,vnm]==0);trueNeg=sum(dfn[,vnm]==0);falseNeg=sum(dfn[,vnm]>0)
+		vanm<-naqq[cc]
+		ccnam<-ifelse(vanm=="hprfo","randF",ifelse(naqq[cc]=="hpsvm","SVM",ifelse(naqq[cc]=="hpboo","Boost","XGBM")))
+		truePos=sum(dfp[,vanm]>0);falsePos=sum(dfp[,vanm]==0);trueNeg=sum(dfn[,vanm]==0);falseNeg=sum(dfn[,vanm]>0)
 		kappaval<-cohen.kappa(cbind(df[,1],qq[,cc]))
 		tdf<-data.frame(Model=ccnam,truePos=truePos,falsePos=falsePos,trueNeg=trueNeg,falseNeg=falseNeg,Kappa=kappaval$kappa)
 		mdf<-rbind(mdf,tdf)
