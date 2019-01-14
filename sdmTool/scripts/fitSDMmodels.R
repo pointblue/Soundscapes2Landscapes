@@ -65,9 +65,9 @@ fitXGB<-function(trainset,testset,predgriddf){
 
 getVariableImportance<-function(rfom,svmm,boom,xgbm,trainset){
 	imptemp<-data.frame()
-	if(!inherits(rfom,"try-error")){imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)}
-	if(!inherits(svmm,"try-error")){impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)}
-	if(!inherits(boom,"try-error")){impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)}
+	if(!inherits(rfom,"try-error") && class(rfom@object)!="character"){imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)}
+	if(!inherits(svmm,"try-error") && class(svmm@object)!="character"){impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)}
+	if(!inherits(boom,"try-error") && class(boom@object)!="character"){impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)}
 	if(!inherits(xgbm,"try-error")){
 		impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
 		impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
@@ -114,61 +114,39 @@ checkSavePath<-function(svpth,rez){
 }
 
 getConfusionMatrix<-function(df,np){
-	if(ncol(df)==5){
-		qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
-					rf=ifelse(rr[2]>=np,1,0);
-					sv=ifelse(rr[3]>=np,1,0);
-					bo=ifelse(rr[4]>=np,1,0);
-					gb=ifelse(rr[5]>=np,1,0);
-					rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo,xgbm=gb);
-					return(rdf)},np=np)
-		names(qq)<-c("observed","hprfo","hpsvm","hpboo","hxgbm")
-		krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
-		kboo<-cohen.kappa(qq[,c(1,4)]);kxgb<-cohen.kappa(qq[,c(1,5)])
-		df<-cbind(df,qq)
-		dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
-		mdf<-data.frame(Model=c("randF","SVM","Boost","XGBM"),
-				truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0),sum(dfp$hxgbm>0)),
-				falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0),sum(dfp$hxgbm==0)),
-				trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0),sum(dfn$hxgbm==0)),
-				falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0),sum(dfn$hxgbm>0)),
-				Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa,kxgb$kappa))
-	}else{
-		qq<-adply(.data=df,.margins=1,.fun=function(rr,np){
-					rf=ifelse(rr[2]>=np,1,0);
-					sv=ifelse(rr[3]>=np,1,0);
-					bo=ifelse(rr[4]>=np,1,0);
-					rdf<-data.frame(prfo=rf,psvm=sv,pboo=bo);
-					return(rdf)},np=np)
-		names(qq)<-c("observed","hprfo","hpsvm","hpboo")
-		krfo<-cohen.kappa(qq[,c(1,2)]);ksvm<-cohen.kappa(qq[,c(1,3)]);
-		kboo<-cohen.kappa(qq[,c(1,4)])
-		df<-cbind(df,qq)
-		dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
-		mdf<-data.frame(Model=c("randF","SVM","Boost"),
-				truePos=c(sum(dfp$hprfo>0),sum(dfp$hpsvm>0),sum(dfp$hpboo>0)),
-				falsePos=c(sum(dfp$hprfo==0),sum(dfp$hpsvm==0),sum(dfp$hpboo==0)),
-				trueNeg=c(sum(dfn$hprfo==0),sum(dfn$hpsvm==0),sum(dfn$hpboo==0)),
-				falseNeg=c(sum(dfn$hprfo>0),sum(dfn$hpsvm>0),sum(dfn$hpboo>0)),
-				Kappa=c(krfo$kappa,ksvm$kappa,kboo$kappa))
+	ncd<-ncol(df)
+	if(ncd>1){
+		qq<-as.data.frame(apply(df[,2:ncd],MARGIN=2,FUN=function(rr,np){z<-ifelse(rr>=np,1,0);return(z)},np=np))
+		names(qq)<-paste0("h",names(qq))
+	}
+	df<-cbind(df,qq)
+	dfp<-subset(df,observed>0);dfn<-subset(df,observed==0)
+	mdf<-data.frame()
+	for(cc in 1:ncol(qq)){
+		vnm<-names(qq)[cc]
+		ccnam<-ifelse(vnm=="hprfo","randF",ifelse(vnm<-names(qq)[cc]=="hpsvm","SVM",ifelse(vnm<-names(qq)[cc]=="hpboo","Boost","XGBM")))
+		truePos=sum(dfp[,vnm]>0);falsePos=sum(dfp[,vnm]==0);trueNeg=sum(dfn[,vnm]==0);falseNeg=sum(dfn[,vnm]>0)
+		kappaval<-cohen.kappa(cbind(df[,1],qq[,cc]))
+		tdf<-data.frame(Model=ccnam,truePos=truePos,falsePos=falsePos,trueNeg=trueNeg,falseNeg=falseNeg,Kappa=kappaval$kappa)
+		mdf<-rbind(mdf,tdf)
 	}
 	return(mdf)
 }
 
 getPredicted<-function(preds,predgriddf,test,testset,rfom,svmm,boom,xgbm){
-	if(!inherits(rfom,"try-error")){
+	if(!inherits(rfom,"try-error") && class(rfom@object)!="character"){
 		prfom<-as.data.frame(predict(rfom,predgriddf))
 		preds$vrfom<-as.numeric(prfom[,2])
 		trfom<-as.data.frame(predict(rfom,testset))
 		test$prfo<-as.numeric(trfom[,2])
 	}
-	if(!inherits(svmm,"try-error")){
+	if(!inherits(svmm,"try-error") && class(svmm@object)!="character"){
 		psvmm<-as.data.frame(predict(svmm,predgriddf))
 		preds$vsvmm<-as.numeric(psvmm[,2])
 		tsvmm<-as.data.frame(predict(svmm,testset))
 		test$psvm<-as.numeric(tsvmm[,2])
 	}
-	if(!inherits(boom,"try-error")){
+	if(!inherits(boom,"try-error") && class(boom@object)!="character"){
 		pboom<-as.data.frame(predict(boom,predgriddf))
 		preds$vboom<-as.numeric(pboom[,2])
 		tboom<-as.data.frame(predict(boom,testset))
@@ -183,7 +161,7 @@ getPredicted<-function(preds,predgriddf,test,testset,rfom,svmm,boom,xgbm){
 }
 
 fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
-	logf<-zz;ncores=NULL;percent.train=0.8;noise="noised"
+	#logf<-zz;ncores=NULL;percent.train=0.8;noise="noised"
 	
 	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
 	spcd<-X[["spp"]];gediyr<-X[["yrsp"]];addGEDI<-X[["gedi"]]
@@ -278,6 +256,9 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			trainsize<-round(percent.train*nrow(spdata))	#setting train size to 80%
 			naivePrev<-sum(spdata$PresAbs)/nrow(spdata)
 			
+			#remove from memory if they exist
+			rm(list=c("rfom","svmm","boom","xgbm"));gc()
+			
 			## fitting  models
 			nc<-ncol(trainset)-4
 			fmlf<-paste("PresAbs_f~",paste(names(trainset[1:nc]),collapse="+"),sep=" ")
@@ -287,7 +268,8 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			boom<-try(fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit),silent=TRUE)
 			xgbm<-try(fitXGB(trainset,testset,predgriddf),silent=TRUE)
 			
-			if(inherits(rfom,"try-error") && inherits(rfom,"try-error") && inherits(rfom,"try-error") && inherits(rfom,"try-error")){
+			if((inherits(rfom,"try-error") || class(rfom@object)=="character") && (inherits(svmm,"try-error") || class(svmm@object)=="character") && 
+					(inherits(boom,"try-error") || class(boom@object)=="character") && inherits(xgbm,"try-error")){
 				cat("None of the models attempted was able to converge and fit", file = logf, sep = "\n", append=TRUE)
 			}else{
 				cat("Some or all models were fitted. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
@@ -313,9 +295,9 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				## convert predicted values to logits...
 				#preds<-adply(.data=preds[,2:5],.margins=1,.fun=function(x)log(x)-log(1-x))	#Too slow!
 				preds<-data.table(preds)
-				if(!inherits(rfom,"try-error")){preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]}
-				if(!inherits(svmm,"try-error")){preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]}
-				if(!inherits(boom,"try-error")){preds[,lgvboom:=log(vboom)-log(1-vboom),]}
+				if(!inherits(rfom,"try-error") && class(rfom@object)!="character"){preds[,lgvrfom:=log(vrfom)-log(1-vrfom),]}
+				if(!inherits(svmm,"try-error") && class(svmm@object)!="character"){preds[,lgvsvmm:=log(vsvmm)-log(1-vsvmm),]}
+				if(!inherits(boom,"try-error") && class(boom@object)!="character"){preds[,lgvboom:=log(vboom)-log(1-vboom),]}
 				if(!inherits(xgbm,"try-error")){preds[,lgvxgbm:=log(vxgbm)-log(1-vxgbm),]}
 				
 				## and weighted average is...3=3; 5=4:5; 7=5:7 9=6:9
