@@ -63,6 +63,20 @@ fitXGB<-function(trainset,testset,predgriddf){
 	res=list(model=bst,predtest=pred,predgrid=predgrid,varimp=imdf)
 }
 
+getVariableImportance<-function(rfom,svmm,boom,xgbm,trainset){
+	imptemp<-data.frame()
+	if(!inherits(rfom,"try-error")){imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)}
+	if(!inherits(svmm,"try-error")){impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)}
+	if(!inherits(boom,"try-error")){impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)}
+	if(!inherits(xgbm,"try-error")){
+		impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
+		impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
+		impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
+		imptemp<-rbind(imptemp,impxgb)
+	}
+	return(imptemp)
+}
+
 retrieveVarImp<-function(mdl,trainset,type){
 	impres<-Importance(mdl, data=trainset)
 	impdf<-data.frame(Variable=names(trainset),AbsImportance=impres$imp,Model=type)
@@ -141,7 +155,7 @@ getConfusionMatrix<-function(df,np){
 	return(mdf)
 }
 
-getPredicted<-function(preds,predgriddf,test,rfom,svmm,boom,xgbm){
+getPredicted<-function(preds,predgriddf,test,testset,rfom,svmm,boom,xgbm){
 	if(!inherits(rfom,"try-error")){
 		prfom<-as.data.frame(predict(rfom,predgriddf))
 		preds$vrfom<-as.numeric(prfom[,2])
@@ -268,8 +282,8 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			nc<-ncol(trainset)-4
 			fmlf<-paste("PresAbs_f~",paste(names(trainset[1:nc]),collapse="+"),sep=" ")
 			fmln<-paste("PresAbs~",paste(names(trainset[3:nc]),collapse="+"),sep="")
-			svmm<-try(fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2),silent=TRUE)
 			rfom<-try(fit(as.formula(fmlf), data=trainset, model="randomForest",na.action=na.omit,importance=TRUE),silent=TRUE)
+			svmm<-try(fit(as.formula(fmlf), data=trainset, model="svm", cross=10, C=2),silent=TRUE)
 			boom<-try(fit(as.formula(fmlf), data=trainset, model="boosting",na.action=na.omit),silent=TRUE)
 			xgbm<-try(fitXGB(trainset,testset,predgriddf),silent=TRUE)
 			
@@ -284,7 +298,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				test<-data.frame(observed=testset[,"PresAbs"])
 				
 				## predict to test set and eval the rmse
-				predres<-getPredicted(preds=preds,predgriddf=predgriddf,test=test,rfom=rfom,svmm=svmm,boom=boom,xgbm=xgbm)
+				predres<-getPredicted(preds=preds,predgriddf=predgriddf,test=test,testset=testset,rfom=rfom,svmm=svmm,boom=boom,xgbm=xgbm)
 				preds<-predres$preds
 				test<-predres$test
 				
@@ -306,11 +320,10 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				
 				## and weighted average is...3=3; 5=4:5; 7=5:7 9=6:9
 				ssup<-sum(supp)
-				if(!inherits(xgbm,"try-error")){
-					preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[6:9])%*%supp/ssup,supp=supp,ssup=ssup),]
-				}else{
-					preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup)as.numeric(x[5:7])%*%supp/ssup,supp=supp,ssup=ssup),]
-				}
+				ncp<-ncol(preds)
+				if(ncp==3){ncprg<-3}else if(ncp==5){ncprg<-4:5}else if(ncp==7){ncprg<-5:7}else{ncprg<-6:9}
+				preds[,lgweighted:=apply(X=preds,MARGIN=1,FUN=function(x,supp,ssup,ncprg)as.numeric(x[ncprg])%*%supp/ssup,supp=supp,ssup=ssup,ncprg=ncprg),]
+				
 				## convert weighted back to probabilities...
 				preds[,weighted:=exp(lgweighted)/(1+exp(lgweighted)),]
 				
@@ -332,21 +345,12 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 				
 				cat("Calculating variable importance...", file = logf, sep = "\n", append=TRUE)
 				#compile variable importance-top 10
-				imptemp<-data.frame()
-				impsvm<-retrieveVarImp(mdl=svmm,trainset=trainset,type="SVM");imptemp<-rbind(imptemp,impsvm)
-				imprfo<-retrieveVarImp(mdl=rfom,trainset=trainset,type="RandomForests");imptemp<-rbind(imptemp,imprfo)
-				impboo<-retrieveVarImp(mdl=boom,trainset=trainset,type="AdaBoost");imptemp<-rbind(imptemp,impboo)
-				if(!inherits(xgbm,"try-error")){
-					impxgb<-xgbm$varimp[,c("Feature","Gain")];names(impxgb)<-c("Variable","AbsImportance")
-					impxgb$Model<-"xgBoost";impxgb<-impxgb[1:10,]
-					impxgb$RelImportance<-lapply(impxgb$AbsImportance,FUN=function(x,sumI){absi<-x/sumI;return(absi)},sumI=sum(impxgb$AbsImportance))
-					imptemp<-rbind(imptemp,impxgb)
-				}
-				imptemp<-getVarMetaClass(df=imptemp)
-				imptemp$Species<-spcd;imptemp$Resolution<-resolution
+				importance<-getVariableImportance(rfom,svmm,boom,xgbm,trainset)
+				importance<-getVarMetaClass(df=importance)
+				importance$Species<-spcd;importance$Resolution<-resolution
 				
 				cat("Saving results, wrapping up ...", file = logf, sep = "\n", append=TRUE)
-				save(trainset,testset,test,gofMetrics,rfom,svmm,boom,xgbm,imptemp, file=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_modelResults.RData"))
+				save(trainset,testset,test,gofMetrics,rfom,svmm,boom,xgbm,importance, file=paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,addgn,"_modelResults.RData"))
 				#topvars<-rbind(topvars,imptemp)
 				
 			}
