@@ -38,7 +38,7 @@ fitXGB<-function(trainset,testset,predgriddf){
 	adn<-subset(qq,grepl("PresAbs",qq)==F & grepl("inOut",qq)==F)
 	trainMatrix<-as.matrix(trainset[,adn])
 	testMatrix<-as.matrix(testset[,adn])
-	predMatrix<-as.matrix(predgriddf[,2:ncol(predgriddf)])
+	predMatrix<-as.matrix(predgriddf[,adn])
 	sp.train<-list(data=trainMatrix,label=trainset$PresAbs)
 	sp.test<-list(data=testMatrix,label=testset$PresAbs)
 	dtrain <- xgb.DMatrix(sp.train$data, label = sp.train$label)
