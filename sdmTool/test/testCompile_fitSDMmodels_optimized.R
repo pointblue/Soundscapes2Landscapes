@@ -7,7 +7,7 @@ libs<-c("rminer","raster","dismo","plyr","data.table","doParallel","xgboost","ca
 sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
 
 ###
-source("c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/scripts/fitSDMmodels_optimized.R")
+source("/home/ubuntu/Soundscapes2Landscapes/sdmTool/scripts/fitSDMmodels_optimized.R")
 fitCaseModelCmp <- try(cmpfun(fitCaseModel,options=list(suppressAll=TRUE)),silent=T)
 cmpflag<-1
 if(inherits(fitCaseModelCmp,"try-error")){
