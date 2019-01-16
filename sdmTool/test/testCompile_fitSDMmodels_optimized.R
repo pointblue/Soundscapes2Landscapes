@@ -4,6 +4,8 @@
 ###############################################################################
 
 
+<<<<<<< masterTmp
+=======
 libs<-c("rminer","raster","dismo","plyr","data.table","doParallel","xgboost","caret","kernlab","psych","compiler");
 sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
 
@@ -47,4 +49,5 @@ print(res)
 logf=zz;ncores=NULL;percent.train=0.8;noise="noised"
 ##
 
+>>>>>>> master
 
