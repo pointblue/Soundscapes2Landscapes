@@ -20,8 +20,7 @@ bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-c("_1yr_","_2yr_","_3yr_")
 gedinoise<-"noised_"
-gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","niM2","gVDRt","VCFothr","gssHlfC","FHD","FHDhist","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304",
-		"hLAI010","hLAI102","hLAI203","hLAI304","gVDRm","gVDRb")
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gssHlfC","FHD","FHDhist","niM2","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304","gVDRt","gVDRm","gVDRb")
 birdfiles<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
 
 
@@ -219,7 +218,6 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			  covnams<-names(scaledcovardf)
 			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 3yr GEDI covariates
 			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
-			  covnams<-subset(covnams,!grepl("noised_VCFothr_",covnams))			#need to remove this because it does not exist at higher resolutions
 			  subscaledcovardf<-scaledcovardf[,covnams]
 				covarInf<-vif_func(in_frame=subscaledcovardf)
 				#but after deflation, add back the equivalent 2yr and 1yr
@@ -263,102 +261,102 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 
 Sys.time()-tm
 
-q_noged<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods){
-			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
-			xshft<-ifelse(zz=="1000M",-381.2,118.8)
-			# DEM_Rescaled
-			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/N38W123+124_1arc_V2_",zz,".tif")
-			dem<-raster(pth)
-			stk<-dem
-			
-			# Street_Distance
-			pth<-paste0(rpth,"Street_Distance/",zz,"/StreetDistance_",zz,"_clip.tif")
-			str_dist<-raster(pth)
-			str_dist<-cropShift(rast=str_dist,dem=dem,xshft=xshft,yshft=yshft)
-			stk<-stack(dem,str_dist)
-			
-			# Stream_Distance
-			pth<-paste0(rpth,"Stream_Distance/",zz,"/StreamDistance_",zz,"_clip.tif")
-			stm_dist<-raster(pth)
-			stm_dist<-cropShift(rast=stm_dist,dem=dem,xshft=xshft,yshft=yshft)
-			stk<-stack(stk,stm_dist)
-			
-			# Coast_Distance
-			pth<-paste0(rpth,"Coast_Distance/",zz,"/CoastDistance_",zz,"_clip.tif")
-			cst_dist<-raster(pth)
-			cst_dist<-cropShift(rast=cst_dist,dem=dem,xshft=xshft,yshft=yshft)
-			stk<-stack(stk,cst_dist)
-			
-			# DHI_MODIS = NDVI
-			ndvinames<-character();i<-0
-			for(nn in ndvivars){
-				i<-i+1
-				pth<-paste0(rpth,"DHI_MODIS/",zz,"/ndvi_",zz,nn,"-EPSG32610.tif")
-				ndvirast<-raster(pth)
-				if(i==1){
-					ndvistack<-ndvirast
-				}else{
-					ndvistack<-stack(ndvistack,ndvirast)
-				}
-				nvname<-paste0("ndvi",nn,"_",zz)
-				ndvinames<-c(ndvinames,nvname)
-			}
-			names(ndvistack)<-ndvinames
-			stk<-stack(stk,ndvistack)
-			
-			# BCM
-			i<-0
-			bcmstkname<-character()
-			for(vv in bcmvars){
-				for(yy in bcmwyrs){
-					for(ss in bcmperiods){
-						i<-i+1
-						pth<-paste0(rpth,"BCM/",zz,"/",vv,"/",vv,yy,ss,"_",zz,".tif")
-						bcmvar<-raster(pth)
-						if(i==1){
-							bcmstk<-bcmvar
-						}else{
-							bcmstk<-stack(bcmstk,bcmvar)
-						}
-						vnam<-paste0(vv,yy,ss,"_",zz)
-						bcmstkname<-c(bcmstkname,vnam)
-					}
-				}
-			}
-			names(bcmstk)<-bcmstkname
-			stk<-stack(stk,bcmstk)
-			
-			# Make df...
-			covardf<-as.data.frame(stk,xy=TRUE)
-			covardf<-getCellId(df=covardf,rast=dem,rez=zz)
-			exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
-			covardf<-covardf[,which(!names(covardf) %in% exclvars)]
-			nccdf<-ncol(covardf)
-			
-			# scaled
-			scaledcovars<-scale(covardf[,3:(nccdf-1)])
-			
-			# VIF-corrected
-			covarInf<-vif_func(in_frame=scaledcovars)
-			deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
-			
-			# loop through each species' data and merge with the above tables 
-			for(ff in list.files(birdfiles)){
-				load(paste0(birdfiles,ff))
-				# use the right resolution
-				resv<-ifelse(zz=="250M",1,ifelse(zz=="500M",2,3))
-				bdf<-datalst[[resv]]
-				spp<-unique(bdf$SpeciesCode)
-				gidfld<-paste0("gId",zz)
-				names(bdf)<-gsub("CellId",gidfld,names(bdf))
-				names(bdf)<-gsub("presence",spp,names(bdf))
-				names(bdf)<-gsub("NumDet",paste0("NumDet",spp),names(bdf))
-				bdf<-bdf[,c(gidfld,spp,paste0("NumDet",spp))]
-				
-				deflatedcovardf<-merge(deflatedcovardf,bdf,by=gidfld,all.x=T)
-			}
-			# save
-			svpth<-paste0(rpth,"birds/",zz)
-			save(deflatedcovardf,file=paste0(svpth,"/NOGEDI_deflated_",zz,".RData"))
-			
-		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods)
+# q_noged<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods){
+# 			yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
+# 			xshft<-ifelse(zz=="1000M",-381.2,118.8)
+# 			# DEM_Rescaled
+# 			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/N38W123+124_1arc_V2_",zz,".tif")
+# 			dem<-raster(pth)
+# 			stk<-dem
+# 			
+# 			# Street_Distance
+# 			pth<-paste0(rpth,"Street_Distance/",zz,"/StreetDistance_",zz,"_clip.tif")
+# 			str_dist<-raster(pth)
+# 			str_dist<-cropShift(rast=str_dist,dem=dem,xshft=xshft,yshft=yshft)
+# 			stk<-stack(dem,str_dist)
+# 			
+# 			# Stream_Distance
+# 			pth<-paste0(rpth,"Stream_Distance/",zz,"/StreamDistance_",zz,"_clip.tif")
+# 			stm_dist<-raster(pth)
+# 			stm_dist<-cropShift(rast=stm_dist,dem=dem,xshft=xshft,yshft=yshft)
+# 			stk<-stack(stk,stm_dist)
+# 			
+# 			# Coast_Distance
+# 			pth<-paste0(rpth,"Coast_Distance/",zz,"/CoastDistance_",zz,"_clip.tif")
+# 			cst_dist<-raster(pth)
+# 			cst_dist<-cropShift(rast=cst_dist,dem=dem,xshft=xshft,yshft=yshft)
+# 			stk<-stack(stk,cst_dist)
+# 			
+# 			# DHI_MODIS = NDVI
+# 			ndvinames<-character();i<-0
+# 			for(nn in ndvivars){
+# 				i<-i+1
+# 				pth<-paste0(rpth,"DHI_MODIS/",zz,"/ndvi_",zz,nn,"-EPSG32610.tif")
+# 				ndvirast<-raster(pth)
+# 				if(i==1){
+# 					ndvistack<-ndvirast
+# 				}else{
+# 					ndvistack<-stack(ndvistack,ndvirast)
+# 				}
+# 				nvname<-paste0("ndvi",nn,"_",zz)
+# 				ndvinames<-c(ndvinames,nvname)
+# 			}
+# 			names(ndvistack)<-ndvinames
+# 			stk<-stack(stk,ndvistack)
+# 			
+# 			# BCM
+# 			i<-0
+# 			bcmstkname<-character()
+# 			for(vv in bcmvars){
+# 				for(yy in bcmwyrs){
+# 					for(ss in bcmperiods){
+# 						i<-i+1
+# 						pth<-paste0(rpth,"BCM/",zz,"/",vv,"/",vv,yy,ss,"_",zz,".tif")
+# 						bcmvar<-raster(pth)
+# 						if(i==1){
+# 							bcmstk<-bcmvar
+# 						}else{
+# 							bcmstk<-stack(bcmstk,bcmvar)
+# 						}
+# 						vnam<-paste0(vv,yy,ss,"_",zz)
+# 						bcmstkname<-c(bcmstkname,vnam)
+# 					}
+# 				}
+# 			}
+# 			names(bcmstk)<-bcmstkname
+# 			stk<-stack(stk,bcmstk)
+# 			
+# 			# Make df...
+# 			covardf<-as.data.frame(stk,xy=TRUE)
+# 			covardf<-getCellId(df=covardf,rast=dem,rez=zz)
+# 			exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
+# 			covardf<-covardf[,which(!names(covardf) %in% exclvars)]
+# 			nccdf<-ncol(covardf)
+# 			
+# 			# scaled
+# 			scaledcovars<-scale(covardf[,3:(nccdf-1)])
+# 			
+# 			# VIF-corrected
+# 			covarInf<-vif_func(in_frame=scaledcovars)
+# 			deflatedcovardf<-cbind(scaledcovars[,covarInf],covardf[,c(1:2,nccdf)])
+# 			
+# 			# loop through each species' data and merge with the above tables 
+# 			for(ff in list.files(birdfiles)){
+# 				load(paste0(birdfiles,ff))
+# 				# use the right resolution
+# 				resv<-ifelse(zz=="250M",1,ifelse(zz=="500M",2,3))
+# 				bdf<-datalst[[resv]]
+# 				spp<-unique(bdf$SpeciesCode)
+# 				gidfld<-paste0("gId",zz)
+# 				names(bdf)<-gsub("CellId",gidfld,names(bdf))
+# 				names(bdf)<-gsub("presence",spp,names(bdf))
+# 				names(bdf)<-gsub("NumDet",paste0("NumDet",spp),names(bdf))
+# 				bdf<-bdf[,c(gidfld,spp,paste0("NumDet",spp))]
+# 				
+# 				deflatedcovardf<-merge(deflatedcovardf,bdf,by=gidfld,all.x=T)
+# 			}
+# 			# save
+# 			svpth<-paste0(rpth,"birds/",zz)
+# 			save(deflatedcovardf,file=paste0(svpth,"/NOGEDI_deflated_",zz,".RData"))
+# 			
+# 		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods)
