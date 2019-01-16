@@ -163,7 +163,7 @@ getPredicted<-function(preds,predgriddf,test,testset,rfom,svmm,boom,xgbm){
 }
 
 fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
-	#logf<-zz;ncores=NULL;percent.train=0.8;noise="noised"
+	res<-"Attempting fit.."
 	
 	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
 	spcd<-X[["spp"]];gediyr<-X[["yrsp"]];addGEDI<-X[["gedi"]]
@@ -351,8 +351,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 			res<-paste0("Skipping ",spcd," at resolution ",resolution," and gedi year: ",gediyr,addgn," because of <5% of sites have presence.")
 		}
 		
-	#}
-	#save(topvars,file=paste0(svpth,resolution,"/topVariables_",resolution,".RData"))
+	return(res)
 	
 }
 

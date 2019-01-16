@@ -4,14 +4,11 @@
 ###############################################################################
 
 
-## This file tests the pre-compilation and run of fitSDMmodels::fitCaseModel
-
-libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab","psych","compiler");
+libs<-c("rminer","raster","dismo","plyr","data.table","doParallel","xgboost","caret","kernlab","psych","compiler");
 sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
-####
 
-
-source("c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/scripts/fitSDMmodels.R")
+###
+source("c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/scripts/fitSDMmodels_optimized.R")
 fitCaseModelCmp <- try(cmpfun(fitCaseModel,options=list(suppressAll=TRUE)),silent=T)
 cmpflag<-1
 if(inherits(fitCaseModelCmp,"try-error")){
@@ -24,19 +21,30 @@ if(inherits(fitCaseModelCmp,"try-error")){
 }
 ###
 
-X<-list(gitpath="c:/users/lsalas/git/Soundscapes2Landscapes/",svpath="c:/temp/s2l/",rez="500M",spp="WESJ",yrsp="3yr",gedi=TRUE)
-logf<-file("c:/temp/s2l/logsdm.log", "w")
 
-### Add this to fitSDMbatch.R
-percent.train=0.8
-noise="noised"
+addGEDI<-c(TRUE)
+gitpath<-"/home/ubuntu/Soundscapes2Landscapes/"
+svpath<-paste0(gitpath,"results/")
+logdir<-paste0(gitpath,"logs/")
+
+X<-list(gitpath=gitpath,svpath=svpath,rez="500M",spp="ACWO",yrsp="3yr",gedi=addGEDI)
+filen<-paste("FitoptimSDMBatch",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
+logfile<-paste(logdir,filen,".step",sep="")
+zz <- try(file(logfile, "w"),silent=T)
+if(inherits(zz,"try-error")){
+	stop("Could not open log file")
+}
 
 if(cmpflag==1){
 	res<-fitCaseModelCmp(X=X,logf=logf,ncores=NULL,percent.train=0.8,noise="noised")
 }else{
 	res<-fitCaseModel(X=X,logf=logf,ncores=NULL,percent.train=0.8,noise="noised")
 }
-###
+close(zz)
 print(res)
 
-close(logf)
+## step-in debug...
+logf=zz;ncores=NULL;percent.train=0.8;noise="noised"
+##
+
+
