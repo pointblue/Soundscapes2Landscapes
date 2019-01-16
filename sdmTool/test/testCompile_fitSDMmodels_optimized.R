@@ -35,9 +35,9 @@ if(inherits(zz,"try-error")){
 }
 
 if(cmpflag==1){
-	res<-fitCaseModelCmp(X=X,logf=logf,ncores=NULL,percent.train=0.8,noise="noised")
+	res<-fitCaseModelCmp(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
 }else{
-	res<-fitCaseModel(X=X,logf=logf,ncores=NULL,percent.train=0.8,noise="noised")
+	res<-fitCaseModel(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
 }
 close(zz)
 print(res)
