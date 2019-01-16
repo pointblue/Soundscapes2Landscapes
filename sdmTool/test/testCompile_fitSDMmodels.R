@@ -10,7 +10,7 @@ libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","ca
 sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE)
 ####
 
-### Add this to fitSDMbatch.R
+
 source("c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/scripts/fitSDMmodels.R")
 fitCaseModelCmp <- try(cmpfun(fitCaseModel,options=list(suppressAll=TRUE)),silent=T)
 cmpflag<-1
