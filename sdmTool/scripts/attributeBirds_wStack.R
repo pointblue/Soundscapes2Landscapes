@@ -11,7 +11,7 @@
 # use that same set of variables at all resolutions
 # merge and save
 library(raster); library(fmsb);library(plyr)
-rpth<-"c:/Soundscapes2Landscapes/sdmTool/data/"
+rpth<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
 rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
@@ -21,7 +21,7 @@ bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-c("_1yr_","_2yr_","_3yr_")
 gedinoise<-"noised_"
 gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gssHlfC","FHD","FHDhist","niM2","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304","gVDRt","gVDRm","gVDRb")
-birdfiles<-"c:/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
+birdfiles<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster

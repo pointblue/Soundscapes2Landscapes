@@ -45,9 +45,9 @@ load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/S
 effort<-effort[,cellId:=NULL]
 obsdata<-obsdata[,c("cellId","JulianDay","DecimalLatitude","DecimalLongitude","county","ObservationCount"):=NULL]; 
 # grids here
-g250<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/250M/N38W123+124_1arc_V2_250m.tif")
-g500<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/500M/N38W123+124_1arc_V2_500m.tif")
-g1000<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/1000M/N38W123+124_1arc_V2_1000m.tif")
+g250<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/250M/dem_clip_250m.tif")
+g500<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/500M/dem_clip_500m.tif")
+g1000<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/1000M/dem_clip_1000m.tif")
 
 ## 1) reattribute with cellIds
 effort<-getCellId(df=effort,rast=g250,rez="250")
@@ -75,7 +75,7 @@ for(ss in species){
 	datalst<-list()
 	for(zz in rezz){
 		dfa<-aggregate(as.formula(paste0("presence~SpeciesCode+",zz)),data=spdat,FUN=function(x){
-					y<-ifelse(sum(x)>1,1,0);return(y)
+					y<-ifelse(sum(x)>0,1,0);return(y)
 				})
 		dfa$Resolution<-paste0(substr(zz,4,7),"M")
 		names(dfa)<-gsub(zz,"CellId",names(dfa))
@@ -85,7 +85,8 @@ for(ss in species){
 		df<-merge(dfa,dfb,by="CellId",all.x=T)
 		datalst[[zz]]<-df
 	}
-	svfile<-paste0("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/",ss,".RData")
+	svfile<-paste0("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/",ss,".RData")
+	#svfile<-paste0("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/",ss,".RData")
 	save(datalst,file=svfile)
 	print(paste("Done with",ss))
 	
