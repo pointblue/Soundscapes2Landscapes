@@ -90,8 +90,8 @@ retrieveVarImp<-function(mdl,trainset,type){
 
 getVarMetaClass<-function(df){
 	df$VarType<-ifelse(substr(df$Variable,1,3) %in% c("aet","cwd","pet","ppt","tmx","tmn"),"BCM",
-				ifelse(substr(df$Variable,1,5) %in% c("Coast","Stree","Strea"),"Distance",
-					ifelse(substr(df$Variable,1,4)=="N38W","DEM",
+				ifelse(substr(df$Variable,1,5) %in% c("Coast","Stree","Strea"),"AUX",
+					ifelse(substr(df$Variable,1,4)=="dem_","AUX",
 						ifelse(substr(df$Variable,1,4)=="ndvi","NDVI","GEDI"))))
 	return(df)
 }
