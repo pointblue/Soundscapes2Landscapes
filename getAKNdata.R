@@ -33,7 +33,7 @@ ebdc<-filterEBird(ebd,distlim=0.1, protocols=NA,approv=1,rev=0,allsp=1)
 #generate effort table
 efffields<-c("ProjectCode","ProtocolCode","SamplingUnitId","YearCollected","MonthCollected","DayCollected","JulianDay","DecimalLatitude","DecimalLongitude")
 effebd<-c("PROJECT_CODE","PROTOCOL_TYPE","LOCALITY_ID","YearCollected","MonthCollected","DayCollected","JulianDay","LATITUDE","LONGITUDE")
-effpc<-unique(pcd[,efffields,with=F]);effas<-unique(pcd[,efffields,with=F]);effbb<-unique(pcd[,efffields,with=F])		#,with=F
+effpc<-unique(pcd[,efffields,with=F]);effas<-unique(asd[,efffields,with=F]);effbb<-unique(bbd[,efffields,with=F])		#,with=F
 effeb<-unique(ebdc[,effebd,with=F]);names(effeb)<-efffields
 effort<-rbind(effpc,effas);effort<-rbind(effort,effbb);effort<-rbind(effort,effeb)
 
@@ -52,6 +52,8 @@ gdfp<-spTransform(gdf,CRS=projection(county))
 cnam<-over(gdfp,county)
 effort[,county:=cnam$NAME,]
 effort<-subset(effort,!is.na(county))
+#remove the waterbird data
+effort<-subset(effort,ProtocolCode!="WATERBIRD_COUNT")
 
 #generate obs table
 obsfields<-c(efffields,"CommonName","SpeciesCode","ObservationCount")
@@ -66,7 +68,7 @@ spp<-subset(spp,grepl(" sp.",spp)==FALSE & grepl("/",spp)==FALSE & grepl(" spp."
 conn<-odbcConnect("prbodb")
 spcddf<-getSpeciesCodes(spp=spp,con=conn)
 odbcClose(conn)
-NROW(spp)==nrow(spcddf)
+NROW(spp)==nrow(spcddf)	#Not equal, but that's OK
 tdf<-data.frame(CommonName=c("Canada Goose","Ridgway's Rail"),SpeciesCode=c("CANG","RIRA"))
 spcddf<-rbind(spcddf,tdf)
 obseb<-merge(obseb,spcddf,by="CommonName",all.x=T)
@@ -88,6 +90,7 @@ obsdata[,cellId:=cid$cells,]
 obsdata<-subset(obsdata,!is.na(county))
 obsdata[,obsCount:=as.integer(as.character(ObservationCount)),]
 obsdata[,obsCount:=ifelse(is.na(obsCount),1,obsCount),]
+obsdata<-subset(obsdata,ProtocolCode %in% (unique(effort$ProtocolCode)))
 
 #save(obsdata,effort,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/SonoMendoLake/unmergedData.Rdata")
 save(obsdata,effort,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/unmergedData.Rdata")

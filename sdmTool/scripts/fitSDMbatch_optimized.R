@@ -29,6 +29,7 @@ spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$
 
 #debug:
 #gitpath<-"/home/ubuntu/Soundscapes2Landscapes/";svpath<-paste0(gitpath,"results/");logdir<-paste0(gitpath,"logs/")
+#gitpath<-"c:/users/lsalas/git/Soundscapes2Landscapes/";svpath<-"c:/temp/S2L/results/";logdir<-"c:/temp/S2L/logs/"
 #spp<-"WESJ";rez<-"250M";yrsp<-"3yr";gedi<-TRUE;sinf<-FALSE;tst<-FALSE
 
 ## check that the git folder exist

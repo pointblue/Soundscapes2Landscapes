@@ -9,12 +9,14 @@ species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL
 		"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
 		"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
 		"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
-resolution<-c("250M","500M","1000M") #
-gediyrs<-c("1yr","2yr","3yr")
-gitpath<-"/home/ubuntu/Soundscapes2Landscapes/"
-svpath<-paste0(gitpath,"results/")
-logdir<-paste0(gitpath,"logs/")
+resolution<-c("250M")#,"500M","1000M") #
+gediyrs<-c("1yr")#,"2yr","3yr")
+#gitpath<-"/home/ubuntu/Soundscapes2Landscapes/"
+gitpath<-"C:/users/lsalas/git/Soundscapes2Landscapes/"
+svpath<-"c:/s2ltemp/sdmtool/results/"
+logdir<-"c:/s2ltemp/sdmtool/logs/"
 
+cases<-expand.grid(spp=species,rez=resolution,yrspan=gediyrs,stringsAsFactors=FALSE)
 
 getVarMetaClass<-function(df){
 	df$VarType<-ifelse(substr(df$Variable,1,3) %in% c("aet","cwd","pet","ppt","tmx","tmn"),"BCM",
@@ -71,7 +73,73 @@ evalLogisticModel<-function(logm,stepm){
 	return(res)
 }
 
-fitLogistic<-function(X,logf,percent.train=0.8,noise="noised",species){
+subsampData<-function(dat,ratioAP=1.5){
+	dfa<-subset(dat,PresAbs==1);nrp<-nrow(dfa);sizbb<-round(nrp*ratioAP)
+	dfb<-subset(dat,PresAbs==0)
+	dfbb<-dfb[sample(1:nrow(dfb),size=sizbb),]
+	spd<-rbind(dfa,dfbb)
+	return(spd)
+}
+
+loopFitLogiticModel<-function(namspdat,spcd,spd,exclgedi,logf){
+	## fitting  model with gedi vars
+	fmln<-paste("PresAbs~",paste(subset(namspdat,namspdat!=spcd),collapse="+"),sep="")
+	logm<-try(glm(as.formula(fmln), data=spd, na.action=na.omit,family="binomial"),silent=TRUE)
+	k<-log(nrow(spd))
+	stepm<-try(step(logm,trace=-1),silent=TRUE)	#using AIC as the selection criterion, improvement in loglike (k)=2
+	## Matt suggested: fit here without gedi and then do a likelihood ratio test
+	fmlnng<-paste("PresAbs~",paste(subset(namspdat,!namspdat %in% c(spcd,exclgedi)),collapse="+"),sep="")
+	logmng<-try(glm(as.formula(fmlnng), data=spd, na.action=na.omit,family="binomial"),silent=TRUE)
+	stepmng<-try(step(logmng,trace=-1),silent=TRUE)
+	
+	if(inherits(logm,"try-error") || inherits(stepm,"try-error")){
+		cat("Failed to fit a logistic model or to perform its stepwise optimization", file = logf, sep = "\n", append=TRUE)
+		reslst<-NA
+	}else{
+		cat("Able to fit and optimize logistic model. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
+		
+		## evaluate and get predicted values: get AUC, RMSE, fitted.vals, residuals, coefficients
+		## Matt suggested: do an up-down stepwise to fit
+		reseval<-try(evalLogisticModel(logm,stepm),silent=TRUE)
+		if(inherits(reseval,"try-error")){
+			cat(reseval, file = logf, sep = "\n", append=TRUE)
+			reslst<-NA
+		}
+		
+		## Try LRT
+		cat("Attempting likelihood ratio test vs model without GEDI...", file = logf, sep = "\n", append=TRUE)
+		lglklogm<-NA;lglkstepm<-NA;logmlrtdf<-NA;stepmlrtdf<-NA;logmlrtX<-NA;stepmlrtX<-NA;logmlrtPr<-NA;stepmlrtPr<-NA
+		if(inherits(logmng,"try-error") || inherits(stepmng,"try-error")){
+			cat("Failed to fit a logistic model without GEDI data or to perform its stepwise optimization", file = logf, sep = "\n", append=TRUE)
+			reslst<-NA
+		}else{
+			logmlrt<-lrtest(logmng,logm)
+			lglklogm<-logmlrt$LogLik[1]/logmlrt$LogLik[2]
+			logmlrtdf<-logmlrt$Df[2];logmlrtX<-logmlrt$Chisq[2];logmlrtPr<-logmlrt[[5]][2]
+			
+			stepmlrt<-lrtest(stepmng,stepm)
+			lglkstepm<-stepmlrt$LogLik[1]/stepmlrt$LogLik[2]
+			stepmlrtdf<-stepmlrt$Df[2];stepmlrtX<-stepmlrt$Chisq[2];stepmlrtPr<-stepmlrt[[5]][2]
+			
+			## report the AUC, RMSE, coefs, and the LRT
+			coeflogm<-reseval$coeflogm;coefstepm<-reseval$coefstepm
+			resdf<-data.frame(Model=c("WithGEDI","WithGEDIoptimized"),
+					AIC=c(reseval$logmaic,reseval$stepmaic),
+					lgRMSE=c(reseval$logmrmse,reseval$stepmrmse),
+					numGEDI=c(reseval$logmNgedi,reseval$stepmNgedi),
+					numGEDI05=c(reseval$logmgedi05,reseval$stepmgedi05),
+					numGEDI10=c(reseval$logmgedi10,reseval$stepmgedi10),
+					LRtest=c(lglklogm,lglkstepm),
+					LRTdf=c(logmlrtdf,stepmlrtdf),
+					LRTchisq=c(logmlrtX,stepmlrtX),
+					LRTpval=c(logmlrtPr,stepmlrtPr))
+			reslst<-list(resdf=resdf,coeflogm=coeflogm,coefstepm=coefstepm)
+		}
+	}
+	return(reslst)
+}
+
+fitLogistic<-function(X,logf,percent.train=0.8,noise="noised",species,resamp,ratioAP){
 	#logf<-zz;percent.train=0.8;noise="noised";species=species
 	
 	pathToGit<-X[["gitpath"]];svpth<-X[["svpath"]];resolution<-X[["rez"]]
@@ -111,9 +179,13 @@ fitLogistic<-function(X,logf,percent.train=0.8,noise="noised",species){
 	spdata<-deflatedcovardf[,which(!names(deflatedcovardf) %in% c(omitspecies,omitnumdet))]
 	spdata<-as.data.frame(na.omit(spdata))
 	
-	# Get the species data fr the right gediyr, and to include/exclude gedi
+	# Get the species data for the right gediyr, and to include/exclude gedi
+	# these filters are applied NOT to the data, but to the model formula
+	# see line 136 below for example
 	namspdat<-names(spdata)
 	namspdat<-subset(namspdat,!namspdat %in% c("x","y",paste0("gId",resolution),paste0("NumDet",spcd)))
+	exclyr<-c("1yr","2yr","3yr");exclyr<-exclyr[which(exclyr!=gediyr)]
+	namspdat<-subset(namspdat,!grepl(exclyr[1],namspdat) & !grepl(exclyr[2],namspdat))
 	
 	exclgedi<-subset(namspdat,grepl("_3yr_",namspdat) | grepl("_2yr_",namspdat) | grepl("_1yr_",namspdat))
 	
@@ -124,72 +196,28 @@ fitLogistic<-function(X,logf,percent.train=0.8,noise="noised",species){
 		cat("Dataset has > 5% of cells with presence", file = logf, sep = "\n", append=TRUE)
 		
 		names(spdata)<-gsub(spcd,"PresAbs",names(spdata))
-		naivePrev<-sum(spdata$PresAbs)/nrow(spdata)
 		
-		## fitting  model with gedi vars
-		rm(list=c("logm","stepm","logmng","stepmng","reseval"))
-		
-		fmln<-paste("PresAbs~",paste(subset(namspdat,namspdat!=spcd),collapse="+"),sep="")
-		logm<-try(glm(as.formula(fmln), data=spdata, na.action=na.omit,family="binomial"),silent=TRUE)
-		k<-log(nrow(spdata))
-		stepm<-try(step(logm,trace=-1),silent=TRUE)	#using AIC as the selection criterion, improvement in loglike (k)=2
-		## Matt suggested: fit here without gedi and then do a likelihood ratio test
-		fmlnng<-paste("PresAbs~",paste(subset(namspdat,!namspdat %in% c(spcd,exclgedi)),collapse="+"),sep="")
-		logmng<-try(glm(as.formula(fmlnng), data=spdata, na.action=na.omit,family="binomial"),silent=TRUE)
-		stepmng<-try(step(logmng,trace=-1),silent=TRUE)
-		
-		if(inherits(logm,"try-error") || inherits(stepm,"try-error")){
-			cat("Failed to fit a logistic model or to perform its stepwise optimization", file = logf, sep = "\n", append=TRUE)
-		}else{
-			cat("Able to fit and optimize logistic model. Evaluating fit and predicting...", file = logf, sep = "\n", append=TRUE)
-			
-			## evaluate and get predicted values: get AUC, RMSE, fitted.vals, residuals, coefficients
-			## Matt suggested: do an up-down stepwise to fit
-			reseval<-try(evalLogisticModel(logm,stepm),silent=TRUE)
-			if(inherits(reseval,"try-error")){
-				stop(reseval)
-			}
-			
-			## Try LRT
-			cat("Attempting likelihood ratio test vs model without GEDI...", file = logf, sep = "\n", append=TRUE)
-			lglklogm<-NA;lglkstepm<-NA;logmlrtdf<-NA;stepmlrtdf<-NA;logmlrtX<-NA;stepmlrtX<-NA;logmlrtPr<-NA;stepmlrtPr<-NA
-			if(inherits(logmng,"try-error") || inherits(stepmng,"try-error")){
-				cat("Failed to fit a logistic model without GEDI data or to perform its stepwise optimization", file = logf, sep = "\n", append=TRUE)
-			}else{
-				logmlrt<-lrtest(logmng,logm)
-				lglklogm<-logmlrt$LogLik[1]/logmlrt$LogLik[2]
-				logmlrtdf<-logmlrt$Df[2];logmlrtX<-logmlrt$Chisq[2];logmlrtPr<-logmlrt[[5]][2]
-				
-				stepmlrt<-lrtest(stepmng,stepm)
-				lglkstepm<-stepmlrt$LogLik[1]/stepmlrt$LogLik[2]
-				stepmlrtdf<-stepmlrt$Df[2];stepmlrtX<-stepmlrt$Chisq[2];stepmlrtPr<-stepmlrt[[5]][2]
-			}
-			
+		if(resamp>0 && !is.na(ratioAP) && ratioAP>1){
+			res<-llply(.data=c(1:resamp),.fun=function(bb,spdata,ratioAP){
+						spd<-subsampData(dat=spdata,ratioAP=ratioAP)
+						resbit<-loopFitLogiticModel(namspdat=namspdat,spcd=spcd,spd=spd,exclgedi=exclgedi,logf=logf)
+						return(resbit)
+					},spdata=spdata,ratioAP=ratioAP)
 			cat("Saving results and wrapping up", file = logf, sep = "\n", append=TRUE)
-			## report the AUC, RMSE, coefs, and the LRT
-			#return(list(logmaic=logmaic,logmrmse=logmrmse,logmNgedi=logmNgedi,logmgedi05=logmgedi05,logmgedi10=logmgedi10,coeflogm=coeflogm,
-			#		stepmaic=stepmaic,stepmrmse=stepmrmse,stepmNgedi=stepmNgedi,stepmgedi05=stepmgedi05,stepmgedi10=stepmgedi10,coefstepm=coefstepm))
-			filen<-paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,"_logisticModelResults.RData")
-			coeflogm<-reseval$coeflogm;coefstepm<-reseval$coefstepm
-			resdf<-data.frame(Model=c("WithGEDI","WithGEDIoptimized"),
-						AIC=c(reseval$logmaic,reseval$stepmaic),
-						lgRMSE=c(reseval$logmrmse,reseval$stepmrmse),
-						numGEDI=c(reseval$logmNgedi,reseval$stepmNgedi),
-						numGEDI05=c(reseval$logmgedi05,reseval$stepmgedi05),
-						numGEDI10=c(reseval$logmgedi10,reseval$stepmgedi10),
-						LRtest=c(lglklogm,lglkstepm),
-						LRTdf=c(logmlrtdf,stepmlrtdf),
-						LRTchisq=c(logmlrtX,stepmlrtX),
-						LRTpval=c(logmlrtPr,stepmlrtPr))
-			save(resdf,coeflogm,coefstepm,file=filen)
-		
+			filen<-paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,"_","_balanced_logisticModelResults.RData")
+		}else{
+			res<-loopFitLogiticModel(namspdat=namspdat,spcd=spcd,spd=spdata,exclgedi=exclgedi,logf=logf)
+			cat("Saving results and wrapping up", file = logf, sep = "\n", append=TRUE)
+			filen<-paste0(svpth,resolution,"/",spcd,"_",resolution,"_",gediyr,"_","_AsIs_logisticModelResults.RData")
 		}
+		save(res,file=filen)
 	}
 }
 
 ## Vectorized - use option .parallel to parallelize; see details in ?l_ply
-cases<-cases<-expand.grid(spp=species,rez=resolution,yrspan=gediyrs,stringsAsFactors=FALSE)
-aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speciesVect){
+## Fitting the models to the data AsIs
+
+aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speciesVect,resamp,ratioAP){
 			X<-list(gitpath=gitpath,svpath=svpath,rez=cases[bb,"rez"],spp=cases[bb,"spp"],yrsp=cases[bb,"yrspan"])
 			filen<-paste("FitLogisticBatch",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
 			logfile<-paste(logdir,filen,".step",sep="")
@@ -198,11 +226,27 @@ aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speci
 				stop("Could not open log file")
 			}
 			
-			reslogistic<-fitLogistic(X,logf=zz,percent.train=0.8,noise="noised",species=speciesVect)
+			reslogistic<-fitLogistic(X,logf=zz,percent.train=0.8,noise="noised",species=speciesVect,resamp=resamp,ratioAP=NA)
 			close(zz)
-			print(paste("Done with logistic model for",ss,"at resolution",rr,"for span",gg))
-		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species)
+			#print(paste("Done with logistic model for",ss,"at resolution",rr,"for span",gg))
+		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species,resamp=0,ratioAP=NA)
 
+## Fitting the models to more balanced data
+aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speciesVect,resamp,ratioAP){
+			X<-list(gitpath=gitpath,svpath=svpath,rez=cases[bb,"rez"],spp=cases[bb,"spp"],yrsp=cases[bb,"yrspan"])
+			filen<-paste("FitLogisticBatch",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
+			logfile<-paste(logdir,filen,".step",sep="")
+			zz <- try(file(logfile, "w"),silent=T)
+			if(inherits(zz,"try-error")){
+				stop("Could not open log file")
+			}
+			
+			reslogistic<-fitLogistic(X,logf=zz,percent.train=0.8,noise="noised",species=speciesVect,resamp=resamp,ratioAP=ratioAP)
+			close(zz)
+			#print(paste("Done with logistic model for",ss,"at resolution",rr,"for span",gg))
+		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species,resamp=3,ratioAP=1.5)
+
+###########################################################################################################################
 
 ## NOT DO: Serialized...
 for(ss in species){
