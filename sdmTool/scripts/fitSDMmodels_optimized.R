@@ -141,7 +141,7 @@ getGOF<-function(testres,thresh){
 	for(cc in 1:ncol(qq)){
 		vanm<-naqq[cc]
 		ccnam<-ifelse(vanm=="hprfo","randF",ifelse(vanm=="hpsvm","SVM",ifelse(vanm=="hpboo","Boost","XGBM")))
-		truePos=sum(dfp[,vanm]>0);falsePos=sum(dfp[,vanm]==0);trueNeg=sum(dfn[,vanm]==0);falseNeg=sum(dfn[,vanm]>0)
+		truePos=sum(dfp[,vanm]>0);falseNeg=sum(dfp[,vanm]==0);trueNeg=sum(dfn[,vanm]==0);falsePos=sum(dfn[,vanm]>0)
 		kappaval<-cohen.kappa(cbind(testres[,1],qq[,cc]))
 		rmseval<-mmetric(x=testres[,1],y=testres[,(cc+1)],metric="RMSE",D=thresh[cc])
 		nt<-nrow(testres);phiv<-cor(testres[,1],testres[,(cc+1)])
