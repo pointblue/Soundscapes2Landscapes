@@ -25,7 +25,12 @@ opt = parse_args(OptionParser(option_list=option_list))
 gitpath<-opt$gitpath;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
 svpath<-opt$svpath;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
 logdir<-opt$logdir;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
-spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$tst
+spp<-opt$spp
+rez<-opt$rez
+yrsp<-opt$yrsp
+gedi<-opt$gedi
+sinf<-opt$sinf
+tst<-opt$tst
 
 #debug:
 #gitpath<-"/home/ubuntu/Soundscapes2Landscapes/";svpath<-paste0(gitpath,"results/");logdir<-paste0(gitpath,"logs/")
