@@ -9,12 +9,14 @@ species<-c("WESJ", "HOFI", "CALT", "BLPH", "DEJU", "WCSP", "OATI", "BRBL", "RWBL
 		"CBCH", "SOSP", "YRWA", "MODO", "ACWO", "RSHA", "AMGO", "WEBL", "NOFL", "BUSH",
 		"SPTO", "NOMO", "NUWO", "CAQU", "BEWR", "STJA", "HOSP", "KILL", "AMKE", "DOWO",
 		"WBNU", "PISI", "WEME", "WREN", "PUFI", "SAVS", "BRCR", "WIWA", "BHGR")
-resolution<-c("250M")#,"500M","1000M") #
-gediyrs<-c("1yr")#,"2yr","3yr")
-#gitpath<-"/home/ubuntu/Soundscapes2Landscapes/"
-gitpath<-"C:/users/lsalas/git/Soundscapes2Landscapes/"
-svpath<-"c:/s2ltemp/sdmtool/results/"
-logdir<-"c:/s2ltemp/sdmtool/logs/"
+resolution<-c("250M","500M","1000M") #
+gediyrs<-c("1yr","2yr","3yr")
+gitpath<-"/home/ubuntu/Soundscapes2Landscapes/"
+#gitpath<-"C:/users/lsalas/git/Soundscapes2Landscapes/"
+#svpath<-"c:/s2ltemp/sdmtool/results/"
+svpath<-"/home/ubuntu/S2Lanalyses/results/"
+#logdir<-"c:/s2ltemp/sdmtool/logs/"
+logdir<-"/home/ubuntu/S2Lanalyses/logs/"
 
 cases<-expand.grid(spp=species,rez=resolution,yrspan=gediyrs,stringsAsFactors=FALSE)
 
@@ -74,8 +76,13 @@ evalLogisticModel<-function(logm,stepm){
 }
 
 subsampData<-function(dat,ratioAP=1.5){
-	dfa<-subset(dat,PresAbs==1);nrp<-nrow(dfa);sizbb<-round(nrp*ratioAP)
+	dfa<-subset(dat,PresAbs==1);nrp<-nrow(dfa)
 	dfb<-subset(dat,PresAbs==0)
+	ratAP<-ratioAP
+	if((nrow(dfb)/nrp) < ratioAP){
+		ratAP<-1.25
+	}
+	sizbb<-round(nrp*ratAP)
 	dfbb<-dfb[sample(1:nrow(dfb),size=sizbb),]
 	spd<-rbind(dfa,dfbb)
 	return(spd)
@@ -217,6 +224,7 @@ fitLogistic<-function(X,logf,percent.train=0.8,noise="noised",species,resamp,rat
 ## Vectorized - use option .parallel to parallelize; see details in ?l_ply
 ## Fitting the models to the data AsIs
 
+
 aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speciesVect,resamp,ratioAP){
 			X<-list(gitpath=gitpath,svpath=svpath,rez=cases[bb,"rez"],spp=cases[bb,"spp"],yrsp=cases[bb,"yrspan"])
 			filen<-paste("FitLogisticBatch",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
@@ -232,6 +240,7 @@ aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speci
 		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species,resamp=0,ratioAP=NA)
 
 ## Fitting the models to more balanced data
+tm<-Sys.time()
 aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speciesVect,resamp,ratioAP){
 			X<-list(gitpath=gitpath,svpath=svpath,rez=cases[bb,"rez"],spp=cases[bb,"spp"],yrsp=cases[bb,"yrspan"])
 			filen<-paste("FitLogisticBatch",format(Sys.time(),"%Y%m%d_%H%M"),sep="_")
@@ -244,7 +253,9 @@ aa<-l_ply(.data=1:nrow(cases),.fun=function(bb,cases,gitpath,svpath,logdir,speci
 			reslogistic<-fitLogistic(X,logf=zz,percent.train=0.8,noise="noised",species=speciesVect,resamp=resamp,ratioAP=ratioAP)
 			close(zz)
 			#print(paste("Done with logistic model for",ss,"at resolution",rr,"for span",gg))
-		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species,resamp=3,ratioAP=1.5)
+		},cases=cases,gitpath=gitpath,svpath=svpath,logdir=logdir,speciesVect=species,resamp=500,ratioAP=1.5)
+
+Sys.time()-tm
 
 ###########################################################################################################################
 
