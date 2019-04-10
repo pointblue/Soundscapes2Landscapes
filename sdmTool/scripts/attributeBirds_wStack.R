@@ -12,7 +12,7 @@
 # merge and save
 library(raster); library(fmsb);library(plyr)
 rpth<-"c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/"
-rezz<-c("250M","500M","1000M") #ALWAYS start with 250M!!!
+rezz<-c("500M","250M","1000M") #ALWAYS start with 250M!!!
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
@@ -105,7 +105,7 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
-			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312))
+			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312)) Matt corrected these...
 			#xshft<-ifelse(zz=="1000M",-381.2,118.8)
 			
 			svpth<-paste0(rpth,"birds/",zz,"/")
@@ -211,40 +211,61 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			scaledcovars<-scale(covardf[,3:(nccdf-1)])
 			scaledcovardf<-cbind(scaledcovars,covardf[,c(1:2,nccdf)])
 			
-			# VIF-corrected - ASSUMING the first zz is indeed 250M
-			if(zz=="250M"){
-			  #use only 3yr
-			  covnams<-names(scaledcovardf)
-			  covnams<-subset(covnams,!grepl("_2yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 3yr GEDI covariates
-			  covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
-			  subscaledcovardf<-scaledcovardf[,covnams]
+			# VIF-corrected - ASSUMING the first zz is indeed 500M - see order of input above, in line 15
+			if(zz=="500M"){
+			  	#use only 2yr
+			  	covnams<-names(scaledcovardf)
+			  	covnams<-subset(covnams,!grepl("_3yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 3yr GEDI covariates
+			  	covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
+			  	subscaledcovardf<-scaledcovardf[,covnams]
 				covarInf<-vif_func(in_frame=subscaledcovardf)
-					gediNams<-c(paste0("noised_",gedivars,"_3yr_",zz));
+			 
+			  	#only GEDI
+				gediNams<-c(paste0("noised_",gedivars,"_2yr_",zz));
 				covarInfGEDI<-vif_func(in_frame=subscaledcovardf[,gediNams])
-					bcmNamsdf<-expand.grid(bcmvars,bcmwyrs,bcmperiods);bcmNamsdf$Var2<-gsub("-",".",bcmNamsdf$Var2)
-					bcmNamsdf$bcmNams<-paste0(bcmNamsdf$Var1,bcmNamsdf$Var2,bcmNamsdf$Var3,"_250M")
+				
+				#only BCM
+				bcmNamsdf<-expand.grid(bcmvars,bcmwyrs,bcmperiods);bcmNamsdf$Var2<-gsub("-",".",bcmNamsdf$Var2)
+				bcmNamsdf$bcmNams<-paste0(bcmNamsdf$Var1,bcmNamsdf$Var2,bcmNamsdf$Var3,"_250M")
 				covarInfBCM<-vif_func(in_frame=subscaledcovardf[,bcmNamsdf$bcmNams])
-					ndviNams<-paste0("ndvi",ndvivars,"_",zz)
+				
+				#only NDVI
+				ndviNams<-paste0("ndvi",ndvivars,"_",zz)
 				covarInfNDVI<-vif_func(in_frame=subscaledcovardf[,ndviNams])
-				#but after deflation, add back the equivalent 2yr and 1yr
-				gedikept<-subset(covarInf,grepl("_3yr_",covarInf))
-				gyr2keep<-gsub("_3yr_","_2yr_",gedikept)
-				gyr1keep<-gsub("_3yr_","_1yr_",gedikept)
+				
+				#but after deflation, add back the equivalent 3yr and 1yr
+				gedikept<-subset(covarInf,grepl("_2yr_",covarInf))
+				gyr2keep<-gsub("_2yr_","_3yr_",gedikept)
+				gyr1keep<-gsub("_2yr_","_1yr_",gedikept)
 				covarInf<-c(covarInf,gyr2keep,gyr1keep)
 				
 				#get gedi only for 1 and 2 gediyrs.
-				gedionly3yr<-covarInfGEDI
-				gedionly2yr<-gsub("_3yr_","_2yr_",gedionly3yr)
-				gedionly1yr<-gsub("_3yr_","_1yr_",gedionly3yr)
+				gedionly2yr<-covarInfGEDI
+				gedionly3yr<-gsub("_2yr_","_3yr_",gedionly2yr)
+				gedionly1yr<-gsub("_2yr_","_1yr_",gedionly2yr)
 				
 				save(covarInf, covarInfBCM, covarInfNDVI, gedionly3yr, gedionly2yr, gedionly1yr, file=paste0(rpth,"birds/covarInf.RData"))
-			}else{	#load the 250M covar selected
+				
+			}else{	#load the 500M covar selected onto the other resolutions....
 				load(paste0(rpth,"birds/covarInf.RData"))
-				covarInf<-gsub("250M",zz,covarInf)
+				covarInf<-gsub("500M",zz,covarInf)
+				#extend to the subsets
+				covarInfBCM<-gsub("500M",zz,covarInfBCM)
+				covarInfNDVI<-gsub("500M",zz,covarInfNDVI)
+				gedionly3yr<-gsub("500M",zz,gedionly3yr)
+				gedionly2yr<-gsub("500M",zz,gedionly2yr)
+				gedionly1yr<-gsub("500M",zz,gedionly1yr)
 				print(NROW(covarInf))
 			}
-			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
 			
+			
+			#add the cell location info to all
+			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
+			deflatedBCMdf<-cbind(scaledcovardf[,covarInfBCM],covardf[,c(1:2,nccdf)])
+			deflatedNDVIdf<-cbind(scaledcovardf[,covarInfNDVI],covardf[,c(1:2,nccdf)])
+			deflatedGEDI3yrdf<-cbind(scaledcovardf[,gedionly3yr],covardf[,c(1:2,nccdf)])
+			deflatedGEDI2yrdf<-cbind(scaledcovardf[,gedionly2yr],covardf[,c(1:2,nccdf)])
+			deflatedGEDI1yrdf<-cbind(scaledcovardf[,gedionly1yr],covardf[,c(1:2,nccdf)])
 			
 			# loop through each species' data and merge with the above tables 
 			for(ff in list.files(birdfiles,pattern="2006_2015")){
@@ -262,12 +283,26 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				covardf<-merge(covardf,bdf,by=gidfld,all.x=T)
 				scaledcovardf<-merge(scaledcovardf,bdf,by=gidfld,all.x=T)
 				deflatedcovardf<-merge(deflatedcovardf,bdf,by=gidfld,all.x=T)
+				
+				#and the subsets...
+				deflatedBCMdf<-merge(deflatedBCMdf,bdf,by=gidfld,all.x=T)
+				deflatedNDVIdf<-merge(deflatedNDVIdf,bdf,by=gidfld,all.x=T)
+				deflatedGEDI3yrdf<-merge(deflatedGEDI3yrdf,bdf,by=gidfld,all.x=T)
+				deflatedGEDI2yrdf<-merge(deflatedGEDI2yrdf,bdf,by=gidfld,all.x=T)
+				deflatedGEDI1yrdf<-merge(deflatedGEDI1yrdf,bdf,by=gidfld,all.x=T)
 			}
 			
 			# save
 			save(covardf,file=paste0(svpth,"unscaled_",zz,".RData"))
 			save(scaledcovardf,file=paste0(svpth,"scaled_",zz,".RData"))
 			save(deflatedcovardf,file=paste0(svpth,"deflated_",zz,".RData"))
+			
+			#save subsets too
+			save(deflatedBCMdf,file=paste0(svpth,"deflatedBCM_",zz,".RData"))
+			save(deflatedNDVIdf,file=paste0(svpth,"deflatedNDVI_",zz,".RData"))
+			save(deflatedGEDI3yrdf,file=paste0(svpth,"deflatedGEDI3yr_",zz,".RData"))
+			save(deflatedGEDI2yrdf,file=paste0(svpth,"deflatedGEDI2yr_",zz,".RData"))
+			save(deflatedGEDI1yrdf,file=paste0(svpth,"deflatedGEDI1yr_",zz,".RData"))
 			
 		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods,gediyr=gediyr,gedinoise=gedinoise,gedivars=gedivars,birdfiles=birdfiles)
 
