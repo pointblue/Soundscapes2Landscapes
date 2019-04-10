@@ -58,13 +58,43 @@ p3a<-ggplot(data=subset(sumdfa,Model=="WithGEDIoptimized" & resolution=="250M" &
 		geom_point(aes(color=gediyr),position=position_dodge(width = 0.5)) +
 		coord_flip() 
 
-p1b<-ggplot(data=subset(sumdfb,Model=="WithGEDIoptimized" & gediyr=="3yr" & resolution=="250M" & LRTpval<0.5),aes(x=species,y=LRTpval)) + geom_point(aes(color=signif)) +
-		coord_flip() + theme(legend.position="none")
+birdhab<-read.csv("c:/users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/Birds_habitats.csv",stringsAsFactors=TRUE)
+sumdfa<-merge(sumdfa,birdhab,by.x="species",by.y="SpeciesCode",all.x=T)
+#Habitats: O=oak, R=riparian, C=conifer, U=urban, G=grasslands, S=scrub
 
-p2b<-ggplot(data=subset(sumdfb,Model=="WithGEDIoptimized" & gediyr=="3yr" & LRTpval<0.5),aes(x=species,y=LRTpval)) + geom_hline(yintercept=0.05,color="black") +
-		geom_point(aes(color=resolution),position=position_dodge(width = 0.5)) +
-		coord_flip() 
+habitats<-c("O","R","C","U","G","S")
+for(hh in habitats){
+	plotdf<-subset(sumdfa,grepl(hh,Habitat))
+	ph<-ggplot(data=subset(plotdf,Model=="WithGEDIoptimized"),aes(x=species,y=LRTpval)) + geom_point(aes(color=signif)) +
+			coord_flip() + theme(legend.position="none") + facet_grid(gediyr~resolution) + labs(x=paste(hh,"Species"),y="Likelihood ratio test p-value")
+	dev.new();print(ph)
+}
 
-p3b<-ggplot(data=subset(sumdfb,Model=="WithGEDIoptimized" & resolution=="250M" & LRTpval<0.5),aes(x=species,y=LRTpval)) + geom_hline(yintercept=0.05,color="black") +
-		geom_point(aes(color=gediyr),position=position_dodge(width = 0.5)) +
-		coord_flip() 
+habbdf<-data.frame()
+for(hh in habitats){
+	tdf<-subset(sumdfa,grepl(hh,Habitat) & Model=="WithGEDIoptimized")
+	tdf$Habitat<-ifelse(hh=="O","Oak woodlands",ifelse(hh=="R","Riparian",ifelse(hh=="C","Conifer forests",ifelse(hh=="U","Urban",
+									ifelse(hh=="G","Grasslands","Scrub")))))
+	tdf$signif<-ifelse(tdf$signif==1,"Important","Not important")
+	habbdf<-rbind(habbdf,tdf)
+}
+ph<-ggplot(data=habbdf,aes(x=Habitat,y=LRTpval)) + geom_violin() + geom_jitter(height = 0, width = 0.1,aes(color=signif)) +
+		coord_flip() + facet_grid(gediyr~resolution) + labs(x="Habitat",y="Likelihood ratio test p-value", color="GEDI relevance")
+
+## need to profile the bootstrap
+sumdfb<-merge(sumdfb,birdhab,by.x="species",by.y="SpeciesCode",all.x=T)
+habbdf<-data.frame()
+for(hh in habitats){
+	tdf<-subset(sumdfb,grepl(hh,Habitat) & Model=="WithGEDIoptimized")
+	tdf$Habitat<-ifelse(hh=="O","Oak woodlands",ifelse(hh=="R","Riparian",ifelse(hh=="C","Conifer forests",ifelse(hh=="U","Urban",
+									ifelse(hh=="G","Grasslands","Scrub")))))
+	tdf$signif<-ifelse(tdf$signif==1,"Important","Not important")
+	habbdf<-rbind(habbdf,tdf)
+}
+ph<-ggplot(data=habbdf,aes(x=Habitat,y=LRTpval)) + geom_violin() + #geom_jitter(height = 0, width = 0.1,aes(color=signif)) +
+		scale_y_continuous(limits=c(0,0.5), breaks=c(0,0.1,0.2,0.3,0.4,0.5)) + geom_hline(yintercept=0.05,color="red") +
+		coord_flip() + facet_grid(gediyr~resolution) + labs(x="Habitat",y="Likelihood ratio test p-value", color="GEDI relevance")
+
+
+
+
