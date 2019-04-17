@@ -232,6 +232,10 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				#only NDVI
 				ndviNams<-paste0("ndvi",ndvivars,"_",zz)
 				covarInfNDVI<-vif_func(in_frame=subscaledcovardf[,ndviNams])
+				                       
+				#no GEDI
+				nogediNams<-c(bcmNamsdf$bcmNams,ndviNams)
+				covarInfNoGEDI<-vif_func(in_frame=subscaledcovardf[,nogediNams])
 				
 				#but after deflation, add back the equivalent 3yr and 1yr
 				gedikept<-subset(covarInf,grepl("_2yr_",covarInf))
@@ -244,7 +248,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				gedionly3yr<-gsub("_2yr_","_3yr_",gedionly2yr)
 				gedionly1yr<-gsub("_2yr_","_1yr_",gedionly2yr)
 				
-				save(covarInf, covarInfBCM, covarInfNDVI, gedionly3yr, gedionly2yr, gedionly1yr, file=paste0(rpth,"birds/covarInf.RData"))
+				save(covarInf, covarInfBCM, covarInfNDVI, covarInfNoGEDI,gedionly3yr, gedionly2yr, gedionly1yr, file=paste0(rpth,"birds/covarInf.RData"))
 				
 			}else{	#load the 500M covar selected onto the other resolutions....
 				load(paste0(rpth,"birds/covarInf.RData"))
@@ -252,6 +256,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				#extend to the subsets
 				covarInfBCM<-gsub("500M",zz,covarInfBCM)
 				covarInfNDVI<-gsub("500M",zz,covarInfNDVI)
+				covarInfNoGEDI<-gsub("500M",zz,covarInfNoGEDI)
 				gedionly3yr<-gsub("500M",zz,gedionly3yr)
 				gedionly2yr<-gsub("500M",zz,gedionly2yr)
 				gedionly1yr<-gsub("500M",zz,gedionly1yr)
@@ -263,6 +268,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			deflatedcovardf<-cbind(scaledcovardf[,covarInf],covardf[,c(1:2,nccdf)])
 			deflatedBCMdf<-cbind(scaledcovardf[,covarInfBCM],covardf[,c(1:2,nccdf)])
 			deflatedNDVIdf<-cbind(scaledcovardf[,covarInfNDVI],covardf[,c(1:2,nccdf)])
+			deflatedNoGEDIdf<-cbind(scaledcovardf[,covarInfNoGEDI],covardf[,c(1:2,nccdf)])
 			deflatedGEDI3yrdf<-cbind(scaledcovardf[,gedionly3yr],covardf[,c(1:2,nccdf)])
 			deflatedGEDI2yrdf<-cbind(scaledcovardf[,gedionly2yr],covardf[,c(1:2,nccdf)])
 			deflatedGEDI1yrdf<-cbind(scaledcovardf[,gedionly1yr],covardf[,c(1:2,nccdf)])
@@ -287,6 +293,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				#and the subsets...
 				deflatedBCMdf<-merge(deflatedBCMdf,bdf,by=gidfld,all.x=T)
 				deflatedNDVIdf<-merge(deflatedNDVIdf,bdf,by=gidfld,all.x=T)
+				deflatedNoGEDIdf<-merge(deflatedNoGEDIdf,bdf,by=gidfld,all.x=T)
 				deflatedGEDI3yrdf<-merge(deflatedGEDI3yrdf,bdf,by=gidfld,all.x=T)
 				deflatedGEDI2yrdf<-merge(deflatedGEDI2yrdf,bdf,by=gidfld,all.x=T)
 				deflatedGEDI1yrdf<-merge(deflatedGEDI1yrdf,bdf,by=gidfld,all.x=T)
@@ -300,6 +307,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			#save subsets too
 			save(deflatedBCMdf,file=paste0(svpth,"deflatedBCM_",zz,".RData"))
 			save(deflatedNDVIdf,file=paste0(svpth,"deflatedNDVI_",zz,".RData"))
+			save(deflatedNoGEDIdf,file=paste0(svpth,"deflatedNoGEDI_",zz,".RData"))
 			save(deflatedGEDI3yrdf,file=paste0(svpth,"deflatedGEDI3yr_",zz,".RData"))
 			save(deflatedGEDI2yrdf,file=paste0(svpth,"deflatedGEDI2yr_",zz,".RData"))
 			save(deflatedGEDI1yrdf,file=paste0(svpth,"deflatedGEDI1yr_",zz,".RData"))
