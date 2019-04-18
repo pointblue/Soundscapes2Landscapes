@@ -12,7 +12,8 @@
 # merge and save
 library(raster); library(fmsb);library(plyr)
 rpth<-"c:/Soundscapes2Landscapes/sdmTool/data/"
-rezz<-c("500M","250M","1000M") #ALWAYS start with 250M!!!
+rezz<-c("500M","250M","1000M") 
+auxvars<-c("dem","StreetDistance","StreamDistance","CoastDistance")
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
 bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
@@ -105,30 +106,24 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
-			#yshft<-ifelse(zz=="250M",62,ifelse(zz=="500M",-188,312)) Matt corrected these...
-			#xshft<-ifelse(zz=="1000M",-381.2,118.8)
-			
+		
 			svpth<-paste0(rpth,"birds/",zz,"/")
-			
-			# DEM_Rescaled
-			pth<-paste0(rpth,"DEM_Rescaled/",zz,"/dem_clip_",zz,".tif")
-			dem<-raster(pth)
-			stk<-dem
-			
-			# Street_Distance
-			pth<-paste0(rpth,"Street_Distance/",zz,"/StreetDistance_",zz,"_clip.tif")
-			str_dist<-raster(pth)
-			stk<-stack(dem,str_dist)
-			
-			# Stream_Distance
-			pth<-paste0(rpth,"Stream_Distance/",zz,"/StreamDistance_",zz,"_clip.tif")
-			stm_dist<-raster(pth)
-			stk<-stack(stk,stm_dist)
-			
-			# Coast_Distance
-			pth<-paste0(rpth,"Coast_Distance/",zz,"/CoastDistance_",zz,"_clip.tif")
-			cst_dist<-raster(pth)
-			stk<-stack(stk,cst_dist)
+		
+			# Auxiliary variables
+			auxnames<-character();i<-0
+			for(nn in auxvars){
+			  i<-i+1
+			  pth<-paste0(rpth,nn,"/",zz,"/",nn,"_",zz,".tif")
+			  auxrast<-raster(pth)
+			  if(i==1){
+			    stk<-auxrast
+			  }else{
+			    stk<-stack(stk,auxrast)
+			  }
+			  auxname<-paste0(nn,"_",zz)
+			  auxnames<-c(auxnames,auxname)
+			}
+			names(stk)<-auxnames
 			
 			# DHI_MODIS = NDVI
 			ndvinames<-character();i<-0
@@ -220,7 +215,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			  	subscaledcovardf<-scaledcovardf[,covnams]
 				covarInf<-vif_func(in_frame=subscaledcovardf)
 			 
-			  	#only GEDI
+			  #only GEDI
 				gediNams<-c(paste0("noised_",gedivars,"_2yr_",zz));
 				covarInfGEDI<-vif_func(in_frame=subscaledcovardf[,gediNams])
 				
@@ -234,7 +229,8 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				covarInfNDVI<-vif_func(in_frame=subscaledcovardf[,ndviNams])
 				                       
 				#no GEDI
-				nogediNams<-c(bcmNamsdf$bcmNams,ndviNams)
+				auxNams<-paste0(auxvars,"_",zz)
+				nogediNams<-c(auxNams,bcmNamsdf$bcmNams,ndviNams)
 				covarInfNoGEDI<-vif_func(in_frame=subscaledcovardf[,nogediNams])
 				
 				#but after deflation, add back the equivalent 3yr and 1yr
