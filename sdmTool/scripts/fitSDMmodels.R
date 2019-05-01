@@ -205,7 +205,7 @@ fitCaseModel<-function(X,logf,ncores=NULL,percent.train=0.8,noise="noised"){
 	#topvars<-data.frame()
 	
 	#get the base grid for this resolution
-	basegrid<-raster(paste0(pathToGit,"sdmTool/data/Coast_Distance/",resolution,"/CoastDistance_",tolower(resolution),"_Clip.tif"))
+	basegrid<-raster(paste0(pathToGit,"sdmTool/data/CoastDistance/",resolution,"/CoastDistance_",tolower(resolution),".tif"))
 	basegrid[]<-NA
 	cat(paste("Loaded base grid for resolution:",resolution), file = logf, sep = "\n", append=TRUE)
 	
