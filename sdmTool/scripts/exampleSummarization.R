@@ -111,10 +111,12 @@ summarizeOutputs<-function(datapth,spcd,rez,addViz=F,emptyRast=NA){
 	#global mean is the sum of weighted values for each cell divided by the sum of weights
 	sumWeights<-sum(supvect)
 	glomean<-(stk[,-1] %*% supvect)/sumWeights
-	gdf<-data.frame(cellId=stk[,1],lgmeanVal=fromLogit(glomean))
+	gdf<-data.frame(cellId=stk[,1],meanVal=fromLogit(glomean))
 	
 	#Calculate the global SE per cell
-	denoVal<-sumWeights*((numBoot-1)/numBoot)
+	#need number of non-zero weights
+	numNZW<-sum(supvect>0)
+	denoVal<-sumWeights*((numNZW-1)/numNZW)
 	#For each cell, SE is the square root of...
 	#SUM(supvect x ((each value minus cell global mean)^2)) / denoVal 
 	diffm<-apply(stk[,-1],2,FUN=function(x,glomean){
