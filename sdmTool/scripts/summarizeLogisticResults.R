@@ -70,15 +70,15 @@ for(hh in habitats){
 	dev.new();print(ph)
 }
 
-habbdf<-data.frame()
+habadf<-data.frame()
 for(hh in habitats){
 	tdf<-subset(sumdfa,grepl(hh,Habitat) & Model=="WithGEDIoptimized")
 	tdf$Habitat<-ifelse(hh=="O","Oak woodlands",ifelse(hh=="R","Riparian",ifelse(hh=="C","Conifer forests",ifelse(hh=="U","Urban",
 									ifelse(hh=="G","Grasslands","Scrub")))))
 	tdf$signif<-ifelse(tdf$signif==1,"Important","Not important")
-	habbdf<-rbind(habbdf,tdf)
+	habadf<-rbind(habadf,tdf)
 }
-ph<-ggplot(data=habbdf,aes(x=Habitat,y=LRTpval)) + geom_violin() + geom_jitter(height = 0, width = 0.1,aes(color=signif)) +
+ph<-ggplot(data=habadf,aes(x=Habitat,y=LRTpval)) + geom_violin() + geom_jitter(height = 0, width = 0.1,aes(color=signif)) +
 		coord_flip() + facet_grid(gediyr~resolution) + labs(x="Habitat",y="Likelihood ratio test p-value", color="GEDI relevance")
 
 ## need to profile the bootstrap
@@ -96,5 +96,6 @@ ph<-ggplot(data=habbdf,aes(x=Habitat,y=LRTpval)) + geom_violin() + #geom_jitter(
 		coord_flip() + facet_grid(gediyr~resolution) + labs(x="Habitat",y="Likelihood ratio test p-value", color="GEDI relevance")
 
 
+#numGEDI
 
 
