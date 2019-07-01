@@ -19,20 +19,17 @@ option_list = list(
 		make_option(c("-o", "--sessinfo"), action="store", default=FALSE, type="logical", help="include sessionInfo() in the log? Defaults to FALSE", dest="sinf"),
 		make_option(c("-v", "--vif"), action="store", default="VIF", type="character", help="use VIF reduced predictors? Use VIF or NoVIF. Defaults to VIF", dest="vif"),
 		make_option(c("-b", "--balancePA"), action="store", default="NoBal", type="character", help="balance presence/absence data for training? Use NoBal, Bal, varA, or stratPA. Defaults to NoBal", dest="bal"),
-		make_option(c("-i", "--iteration"), action="store", default=1, type="numeric", help="which number iteration is this? Defaults to 1", dest="iter")
+		make_option(c("-i", "--iteration"), action="store", default=1, type="numeric", help="which number iteration is this? Defaults to 1", dest="iter"),
+		make_option(c("-x", "--varType"), action="store", default="All_wGEDI", type="character", help="include all variables or just one type? Use All_wGEDI, All_woutGEDI justBCM, justGEDI, justNDVI", dest="varT")
+		
 )
-
 
 ## parse the arguments 
 opt = parse_args(OptionParser(option_list=option_list))
 gitpath<-opt$gitpath;if(substr(gitpath,nchar(gitpath),nchar(gitpath))!="/"){gitpath<-paste0(gitpath,"/")}
 svpath<-opt$svpath;if(!is.null(svpath) && substr(svpath,nchar(svpath),nchar(svpath))!="/"){svpath<-paste0(svpath,"/")}
 logdir<-opt$logdir;if(!is.null(logdir) && substr(logdir,nchar(logdir),nchar(logdir))!="/"){logdir<-paste0(logdir,"/")}
-spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$tst; vif<-opt$vif; bal<-opt$bal; iter<-opt$iter
-
-#debug:
-#gitpath<-"/home/ubuntu/Soundscapes2Landscapes/";svpath<-paste0(gitpath,"results/");logdir<-paste0(gitpath,"logs/")
-#spp<-"WESJ";rez<-"250M";yrsp<-"3yr";gedi<-TRUE;sinf<-FALSE;tst<-FALSE
+spp<-opt$spp;rez<-opt$rez;yrsp<-opt$yrsp;gedi<-opt$gedi;sinf<-opt$sinf;tst<-opt$tst; vif<-opt$vif; bal<-opt$bal; iter<-opt$iter; varT<-opt$varT
 
 ## check that the git folder exist
 if(!dir.exists(gitpath)){	# no gitpath info - can't go further
@@ -99,7 +96,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			#test presence of all libraries needed
 			cat("Testing that all needed libraries are installed and can be loaded", file = zz, sep = "\n", append=TRUE)
-			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab","psych","compiler","dplyr");
+			libs<-c("rminer","raster","dismo","plyr","data.table","xgboost","doParallel","caret","kernlab","psych","compiler","dplyr","spThin","randomForest");
 			libtest<-as.data.frame(sapply(libs, require, character.only=TRUE, quietly=TRUE, warn.conflicts=FALSE));names(libtest)<-"installed"
 			write.table(libtest, row.names = TRUE, col.names = FALSE, file=zz, append=TRUE)
 			cat("\n","\n",file = zz, append=TRUE)
@@ -146,11 +143,11 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 				}else{
 					cat("Successfuly compiled function: fitCaseModel", file = zz, sep = "\n")
 				}
-				X<-list(gitpath=gitpath,svpath=svpath,rez=rez,spp=spp,yrsp=yrsp,gedi=gedi,vif=vif,bal=bal,iter=iter)
+				X<-list(gitpath=gitpath,svpath=svpath,rez=rez,spp=spp,yrsp=yrsp,gedi=gedi,vif=vif,bal=bal,iter=iter,varT=varT)
 				if(cmpflag==1){
-					res<-fitCaseModelCmp(X=X,logf=zz,ncores=NULL,percent.train=0.7,noise="noised")
+					res<-fitCaseModelCmp(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
 				}else{
-					res<-fitCaseModel(X=X,logf=zz,ncores=NULL,percent.train=0.7,noise="noised")
+					res<-fitCaseModel(X=X,logf=zz,ncores=NULL,percent.train=0.8,noise="noised")
 				}
 				
 				
@@ -173,8 +170,7 @@ if(!dir.exists(gitpath)){	# no gitpath info - can't go further
 			
 			print(res)
 			print(paste("Batch call completed. Check file",logfile,"for results"), quote=FALSE)
-			print("Any warnings: ")
-			warnings()
+
 		}
 	}
 	
