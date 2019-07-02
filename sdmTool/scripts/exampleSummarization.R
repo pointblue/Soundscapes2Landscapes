@@ -93,6 +93,7 @@ summarizeOutputs<-function(datapth,spcd,rez,addViz=F,emptyRast=NA){
 		#replace the values of stk by dmx, in the right places - same with supvect
 		for(k in 1:numModels){
 			q<-k+(numModels*(z-1))+1
+			colmean<-
 			stk[,q]<-dmx[,k]
 			supvect[q-1]<-supp[k]
 		}
@@ -126,6 +127,9 @@ summarizeOutputs<-function(datapth,spcd,rez,addViz=F,emptyRast=NA){
 	semx<-sqrt((diffm %*% supvect)/denoVal)
 	
 	gdf$stErr<-fromLogit(semx[,1])
+	gdf$studStErr<-abs(gdf$stErr-gdf$meanVal)/gdf$meanVal
+	gdf$binStErr<-cut(x=gdf$studStErr,breaks=seq(0,2,0.2),labels=as.character(1:10),right=F)
+	gdf$binStErr<-ifelse(is.na(gdf$binStErr),"11",gdf$binStErr)
 	gdf$resolution<-rez
 	
 	return(gdf)
