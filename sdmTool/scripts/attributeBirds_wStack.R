@@ -11,7 +11,7 @@
 # use that same set of variables at all resolutions
 # merge and save
 library(raster); library(fmsb);library(plyr)
-rpth<-"c:/Soundscapes2Landscapes/sdmTool/data/"
+rpth<-"c:/S2Ltemp/sdmTool/data/"
 rezz<-c("500M","250M","1000M") 
 auxvars<-c("dem","StreetDistance","StreamDistance","CoastDistance")
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
@@ -19,10 +19,10 @@ bcmvars<-c("aet","cwd","pet","ppt","tmx","tmn")
 #bcmwyrs<-c("_wy2013","_wy2014","_wy2015")
 bcmwyrs<-"_wy2013-2015"
 bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
-gediyr<-c("_1yr_","_2yr_","_3yr_")
+gediyr<-c("_2yr_")	#"_1yr_",,"_3yr_"
 gedinoise<-"noised_"
-gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gssHlfC","FHD","FHDhist","niM2","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304","gVDRt","gVDRm","gVDRb")
-birdfiles<-"c:/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
+gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gssHlfC","FHD","FHDhist","niM2","gVDRt","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304","gVDRm","gVDRb")
+birdfiles<-"c:/S2Ltemp/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
@@ -106,9 +106,10 @@ vif_func<-function(in_frame,thresh=10,trace=F,...){
 tm<-Sys.time()
 ##Start rezz loop here...
 q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,gediyr,gedinoise,gedivars,birdfiles){
-		
+			print(zz)
 			svpth<-paste0(rpth,"birds/",zz,"/")
-		
+			dem<-paste0("dem_",zz)
+			
 			# Auxiliary variables
 			auxnames<-character();i<-0
 			for(nn in auxvars){
@@ -167,11 +168,10 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			stk<-stack(stk,stk1)
 			
 			#GEDI
-			gdr<-paste0("GEDI/",gedinoise,zz)
+			gdr<-paste0("GEDI/20mGEDI/",gedinoise,zz)
 			gedistkname<-character(); i<-0
 			for(gg in gedivars){
 			  for(yy in gediyr){
-			    #print(paste(gg,yy))
 			    i<-i+1
 			    pth<-paste0(rpth,gdr,"/",gedinoise,gg,yy,zz,".tif")
 			    if(file.exists(pth)){
@@ -197,7 +197,7 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			# Make df...
 			# raw
 			covardf<-as.data.frame(stk,xy=TRUE)
-			covardf<-getCellId(df=covardf,rast=dem,rez=zz)
+			covardf<-getCellId(df=covardf,rast=stk[[dem]],rez=zz)
 			#exclvars<-c("noised_niM2_3yr_","noised_rhGss50_3yr_"); exclvars<-paste0(exclvars,zz)
 			#covardf<-covardf[,which(!names(covardf) %in% exclvars)]
 			nccdf<-ncol(covardf)
@@ -206,16 +206,25 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			scaledcovars<-scale(covardf[,3:(nccdf-1)])
 			scaledcovardf<-cbind(scaledcovars,covardf[,c(1:2,nccdf)])
 			
-			# VIF-corrected - ASSUMING the first zz is indeed 500M - see order of input above, in line 15
+			# VIF-corrected - ASSUMING the first zz is indeed 250M - see order of input above, in line 15
 			if(zz=="500M"){
-			  	#use only 2yr
-			  	covnams<-names(scaledcovardf)
-			  	covnams<-subset(covnams,!grepl("_3yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 3yr GEDI covariates
-			  	covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
-			  	subscaledcovardf<-scaledcovardf[,covnams]
-				covarInf<-vif_func(in_frame=subscaledcovardf)
+				load(paste0(rpth,"birds/covarInf.RData"))
+				covarInf<-gsub("_clip","",covarInf)	#another update
+				#This update is only because we chose to use only 2yr data, so removing the 1yr and 3yr we added in lines 253-256
+				covarInf<-subset(covarInf,!covarInf %in% c("noised_rhGss2_3yr_500M","noised_niM2_1_3yr_500M","noised_gLAI010_3yr_500M","noised_gLAI102_3yr_500M",
+								"noised_gLAI304_3yr_500M","noised_hLAI203_3yr_500M","noised_gVDRm_3yr_500M","noised_gVDRb_3yr_500M",
+								"noised_rhGss2_2yr_500M","noised_hLAI203_2yr_500M","noised_rhGss2_1yr_500M","noised_niM2_1_1yr_500M", 
+								"noised_gLAI010_1yr_500M","noised_gLAI102_1yr_500M","noised_gLAI304_1yr_500M","noised_hLAI203_1yr_500M",
+								"noised_gVDRm_1yr_500M","noised_gVDRb_1yr_500M"))
+				
+				#use only 2yr
+				covnams<-names(scaledcovardf)
+				covnams<-subset(covnams,!grepl("_3yr_",covnams) & !grepl("_1yr_",covnams))	#keep only 2yr GEDI covariates
+				covnams<-subset(covnams,covnams!="y" & covnams!="x" & !grepl("gId",covnams))	#remove x, y, and gId (should not be there - just in case)
+				subscaledcovardf<-scaledcovardf[,covnams]
+			#	covarInf<-vif_func(in_frame=subscaledcovardf)   ***
 			 
-			  #only GEDI
+				#only GEDI
 				gediNams<-c(paste0("noised_",gedivars,"_2yr_",zz));
 				covarInfGEDI<-vif_func(in_frame=subscaledcovardf[,gediNams])
 				
@@ -233,29 +242,37 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				nogediNams<-c(auxNams,bcmNamsdf$bcmNams,ndviNams)
 				covarInfNoGEDI<-vif_func(in_frame=subscaledcovardf[,nogediNams])
 				
-				#but after deflation, add back the equivalent 3yr and 1yr
-				gedikept<-subset(covarInf,grepl("_2yr_",covarInf))
-				gyr2keep<-gsub("_2yr_","_3yr_",gedikept)
-				gyr1keep<-gsub("_2yr_","_1yr_",gedikept)
-				covarInf<-c(covarInf,gyr2keep,gyr1keep)
+			#	#but after deflation, add back the equivalent 3yr and 1yr
+			#	gedikept<-subset(covarInf,grepl("_2yr_",covarInf))
+			#	gyr2keep<-gsub("_2yr_","_3yr_",gedikept)
+			#	gyr1keep<-gsub("_2yr_","_1yr_",gedikept)
+			#	covarInf<-c(covarInf,gyr2keep,gyr1keep)
 				
-				#get gedi only for 1 and 2 gediyrs.
+			#	#get gedi only for 1 and 2 gediyrs.
 				gedionly2yr<-covarInfGEDI
-				gedionly3yr<-gsub("_2yr_","_3yr_",gedionly2yr)
-				gedionly1yr<-gsub("_2yr_","_1yr_",gedionly2yr)
+			#	gedionly3yr<-gsub("_2yr_","_3yr_",gedionly2yr)
+			#	gedionly1yr<-gsub("_2yr_","_1yr_",gedionly2yr)
 				
-				save(covarInf, covarInfBCM, covarInfNDVI, covarInfNoGEDI,gedionly3yr, gedionly2yr, gedionly1yr, file=paste0(rpth,"birds/covarInf.RData"))
+				save(covarInf, covarInfBCM, covarInfNDVI, covarInfNoGEDI,gedionly2yr,file=paste0(rpth,"birds/covarInf.RData"))	#gedionly3yr,  gedionly1yr, 
 				
-			}else{	#load the 500M covar selected onto the other resolutions....
+			}else{	#load the 250M covar selected onto the other resolutions....
 				load(paste0(rpth,"birds/covarInf.RData"))
-				covarInf<-gsub("500M",zz,covarInf)
+				covarInf<-gsub("_clip","",covarInf)	#another update
+				#This update is only because we chose to use only 2yr data, so removing the 1yr and 3yr we added in lines 253-256
+				covarInf<-subset(covarInf,!covarInf %in% c("noised_rhGss2_3yr_500M","noised_niM2_1_3yr_500M","noised_gLAI010_3yr_500M","noised_gLAI102_3yr_500M",
+															"noised_gLAI304_3yr_500M","noised_hLAI203_3yr_500M","noised_gVDRm_3yr_500M","noised_gVDRb_3yr_500M",
+ 															"noised_rhGss2_2yr_500M","noised_hLAI203_2yr_500M","noised_rhGss2_1yr_500M","noised_niM2_1_1yr_500M", 
+															"noised_gLAI010_1yr_500M","noised_gLAI102_1yr_500M","noised_gLAI304_1yr_500M","noised_hLAI203_1yr_500M",
+															"noised_gVDRm_1yr_500M","noised_gVDRb_1yr_500M"))
+				covarInf<-gsub("500M",zz,covarInf)	#my file is not up to date!
+											
 				#extend to the subsets
 				covarInfBCM<-gsub("500M",zz,covarInfBCM)
 				covarInfNDVI<-gsub("500M",zz,covarInfNDVI)
 				covarInfNoGEDI<-gsub("500M",zz,covarInfNoGEDI)
-				gedionly3yr<-gsub("500M",zz,gedionly3yr)
+				#gedionly3yr<-gsub("500M",zz,gedionly3yr)
 				gedionly2yr<-gsub("500M",zz,gedionly2yr)
-				gedionly1yr<-gsub("500M",zz,gedionly1yr)
+				#gedionly1yr<-gsub("500M",zz,gedionly1yr)
 				print(NROW(covarInf))
 			}
 			
@@ -265,12 +282,13 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			deflatedBCMdf<-cbind(scaledcovardf[,covarInfBCM],covardf[,c(1:2,nccdf)])
 			deflatedNDVIdf<-cbind(scaledcovardf[,covarInfNDVI],covardf[,c(1:2,nccdf)])
 			deflatedNoGEDIdf<-cbind(scaledcovardf[,covarInfNoGEDI],covardf[,c(1:2,nccdf)])
-			deflatedGEDI3yrdf<-cbind(scaledcovardf[,gedionly3yr],covardf[,c(1:2,nccdf)])
+			#deflatedGEDI3yrdf<-cbind(scaledcovardf[,gedionly3yr],covardf[,c(1:2,nccdf)])
 			deflatedGEDI2yrdf<-cbind(scaledcovardf[,gedionly2yr],covardf[,c(1:2,nccdf)])
-			deflatedGEDI1yrdf<-cbind(scaledcovardf[,gedionly1yr],covardf[,c(1:2,nccdf)])
+			#deflatedGEDI1yrdf<-cbind(scaledcovardf[,gedionly1yr],covardf[,c(1:2,nccdf)])
 			
 			# loop through each species' data and merge with the above tables 
 			for(ff in list.files(birdfiles,pattern="2006_2015")){
+				print(paste(zz,ff))
 				load(paste0(birdfiles,ff))
 				# use the right resolution
 				resv<-ifelse(zz=="250M",1,ifelse(zz=="500M",2,3))
@@ -290,9 +308,9 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				deflatedBCMdf<-merge(deflatedBCMdf,bdf,by=gidfld,all.x=T)
 				deflatedNDVIdf<-merge(deflatedNDVIdf,bdf,by=gidfld,all.x=T)
 				deflatedNoGEDIdf<-merge(deflatedNoGEDIdf,bdf,by=gidfld,all.x=T)
-				deflatedGEDI3yrdf<-merge(deflatedGEDI3yrdf,bdf,by=gidfld,all.x=T)
+				#deflatedGEDI3yrdf<-merge(deflatedGEDI3yrdf,bdf,by=gidfld,all.x=T)
 				deflatedGEDI2yrdf<-merge(deflatedGEDI2yrdf,bdf,by=gidfld,all.x=T)
-				deflatedGEDI1yrdf<-merge(deflatedGEDI1yrdf,bdf,by=gidfld,all.x=T)
+				#deflatedGEDI1yrdf<-merge(deflatedGEDI1yrdf,bdf,by=gidfld,all.x=T)
 			}
 			
 			# save
@@ -304,9 +322,9 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			save(deflatedBCMdf,file=paste0(svpth,"deflatedBCM_",zz,".RData"))
 			save(deflatedNDVIdf,file=paste0(svpth,"deflatedNDVI_",zz,".RData"))
 			save(deflatedNoGEDIdf,file=paste0(svpth,"deflatedNoGEDI_",zz,".RData"))
-			save(deflatedGEDI3yrdf,file=paste0(svpth,"deflatedGEDI3yr_",zz,".RData"))
+			#save(deflatedGEDI3yrdf,file=paste0(svpth,"deflatedGEDI3yr_",zz,".RData"))
 			save(deflatedGEDI2yrdf,file=paste0(svpth,"deflatedGEDI2yr_",zz,".RData"))
-			save(deflatedGEDI1yrdf,file=paste0(svpth,"deflatedGEDI1yr_",zz,".RData"))
+			#save(deflatedGEDI1yrdf,file=paste0(svpth,"deflatedGEDI1yr_",zz,".RData"))
 			
 		}, rpth=rpth,ndvivars=ndvivars,bcmvars=bcmvars,bcmyrs=bcmyrs,bcmperiods=bcmperiods,gediyr=gediyr,gedinoise=gedinoise,gedivars=gedivars,birdfiles=birdfiles)
 
