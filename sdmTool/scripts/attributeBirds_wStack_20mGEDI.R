@@ -210,14 +210,14 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 			# VIF-corrected - ASSUMING the first zz is indeed 500M - see order of input above, in line 15
 			if(zz=="500M"){
 				load(paste0(rpth,"birds/covarInf.RData"))
-				covarInf<-gsub("250M",zz,covarInf)	#my file is not up to date!
-				covarInf<-gsub("_clip","",covarInf)	#another update
+				covarInf<-gsub("250M",zz,covarInf)	
+				covarInf<-gsub("_clip","",covarInf)	#my file is not up to date
 				#This update is only because we chose to use only 2yr data, so removing the 1yr and 3yr we added in lines 253-256
 				covarInf<-subset(covarInf,!covarInf %in% c("noised_rhGss2_3yr_500M","noised_niM2_1_3yr_500M","noised_gLAI010_3yr_500M","noised_gLAI102_3yr_500M",
-								"noised_gLAI304_3yr_500M","noised_hLAI203_3yr_500M","noised_gVDRm_3yr_500M","noised_gVDRb_3yr_500M",
+								"noised_gLAI203_3yr_500M","noised_gLAI304_3yr_500M","noised_hLAI203_3yr_500M","noised_gVDRm_3yr_500M","noised_gVDRb_3yr_500M",
 								"noised_rhGss2_2yr_500M","noised_hLAI203_2yr_500M","noised_rhGss2_1yr_500M","noised_niM2_1_1yr_500M", 
-								"noised_gLAI010_1yr_500M","noised_gLAI102_1yr_500M","noised_gLAI304_1yr_500M","noised_hLAI203_1yr_500M",
-								"noised_gVDRm_1yr_500M","noised_gVDRb_1yr_500M"))
+								"noised_gLAI010_1yr_500M","noised_gLAI102_1yr_500M","noised_gLAI203_1yr_500M","noised_gLAI304_1yr_500M","noised_hLAI203_1yr_500M",
+								"noised_gVDRm_1yr_500M","noised_gVDRb_1yr_500M")) #           
 				
 				#use only 2yr
 				covnams<-names(scaledcovardf)
@@ -255,18 +255,11 @@ q<-l_ply(.data=rezz,.fun=function(zz,rpth,ndvivars,bcmvars,bcmyrs,bcmperiods,ged
 				#	gedionly3yr<-gsub("_2yr_","_3yr_",gedionly2yr)
 				#	gedionly1yr<-gsub("_2yr_","_1yr_",gedionly2yr)
 				
-				save(covarInf, covarInfBCM, covarInfNDVI, covarInfNoGEDI,gedionly2yr,file=paste0(rpth,"birds/covarInf_20mGEDI.RData"))	#gedionly3yr,  gedionly1yr, 
+				save(covarInf, covarInfBCM, covarInfNDVI, covarInfNoGEDI, gedionly2yr, file=paste0(rpth,"birds/covarInf_20mGEDI.RData"))	#gedionly3yr,  gedionly1yr, 
 				
 			}else{	#load the 500M covar selected onto the other resolutions....
 				load(paste0(rpth,"birds/covarInf_20mGEDI.RData"))
-				covarInf<-gsub("500M",zz,covarInf)	#my file is not up to date!
-				covarInf<-gsub("_clip","",covarInf)	#another update
-				#This update is only because we chose to use only 2yr data, so removing the 1yr and 3yr we added in lines 253-256
-				covarInf<-subset(covarInf,!covarInf %in% c("noised_rhGss2_3yr_500M","noised_niM2_1_3yr_500M","noised_gLAI010_3yr_500M","noised_gLAI102_3yr_500M",
-								"noised_gLAI304_3yr_500M","noised_hLAI203_3yr_500M","noised_gVDRm_3yr_500M","noised_gVDRb_3yr_500M",
-								"noised_rhGss2_2yr_500M","noised_hLAI203_2yr_500M","noised_rhGss2_1yr_500M","noised_niM2_1_1yr_500M", 
-								"noised_gLAI010_1yr_500M","noised_gLAI102_1yr_500M","noised_gLAI304_1yr_500M","noised_hLAI203_1yr_500M",
-								"noised_gVDRm_1yr_500M","noised_gVDRb_1yr_500M"))
+				covarInf<-gsub("500M",zz,covarInf)	
 				#extend to the subsets
 				covarInfBCM<-gsub("500M",zz,covarInfBCM)
 				covarInfNDVI<-gsub("500M",zz,covarInfNDVI)
