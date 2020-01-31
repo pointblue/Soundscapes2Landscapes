@@ -1,8 +1,0 @@
-## TO DO: what else to add? Review functionality with Matt
-## This directory is the repository of simple text yaml files specifying the model fits to perform with the S2L sdm tool
-## The yaml files include the following parameters and acceptable values
-species: all   # or specify one or several with the array of four-letter codes. E.g., [sosp, coye, wiwa]
-resolution: 1000   # valid values: 1000, 500, 250
-noise: 1           # boolean for noise (1) or no noise (0)
-GEDIyears: 3       # a value from 1 to 3
-
