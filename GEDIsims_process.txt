@@ -1,6 +1,0 @@
-Here are the steps to follow, from gathering data to fitting models and visualizing results.
-
-Gather the data: getAKNdata.R
-Filter for the species we need, breeding period, desirable protocols: filterSpeciesData.R
-Then assign each cell of the selected resolution and determine presence/absence for each species: attributeBirds_wStack.R
-The files are ready for fitting or batch fitting all models: fitSDMmodels and fitSDMfiles .R code files, in batch mode or not, with all options or not.

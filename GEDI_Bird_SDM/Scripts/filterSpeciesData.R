@@ -41,15 +41,15 @@ fillBlanks<-function(df,ss,comname){
 }
 
 ## data here: effort and obsdata
-load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/2013_2015_unmergedData.Rdata")
+load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/2006_2015_unmergedData.Rdata")
 
 ## load the 250, 500 and 1000 grids - remove cellId from the effort table and add these grids' cellIds
 effort<-effort[,cellId:=NULL]
-#obsdata<-obsdata[,c("cellId","JulianDay","DecimalLatitude","DecimalLongitude","county","ObservationCount"):=NULL]; 
-# grids here
-g250<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/250M/dem_clip_250m.tif")
-g500<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/500M/dem_clip_500m.tif")
-g1000<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM_Rescaled/1000M/dem_clip_1000m.tif")
+
+# load grids
+g250<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/250M/dem_250m.tif")
+g500<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/500M/dem_500m.tif")
+g1000<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/1000M/dem_1000m.tif")
 
 ## 1) reattribute with cellIds
 effort<-getCellId(df=effort,rast=g250,rez="250")
@@ -62,11 +62,10 @@ species<-spdf$SpeciesCode;
 seIDflds<-c("ProjectCode","ProtocolCode","SamplingUnitId","YearCollected","MonthCollected","DayCollected")
 spflds<-c("CommonName","SpeciesCode","ObservationCount")
 
-# loop through each resolution and each species to construct the udf HERE
-
+# loop through each resolution and each species to construct the udf 
 rezz<-c("gId250","gId500","gId1000")
 
-lapply(species,FUN=function(ss,spdf,effort,obsdata,seIDflds){
+lapply(species,FUN=function(ss,spdf,effort,obsdata,seIDflds,rezz){
 			comname<-subset(spdf,SpeciesCode==ss)$CommonName
 			sttmo<-subset(spdf,SpeciesCode==ss)$sttmo; endmo<-subset(spdf,SpeciesCode==ss)$endmo;
 			speff<-subset(effort,MonthCollected>=sttmo & MonthCollected<=endmo)
@@ -88,15 +87,16 @@ lapply(species,FUN=function(ss,spdf,effort,obsdata,seIDflds){
 				df<-merge(dfa,dfb,by="CellId",all.x=T)
 				datalst[[zz]]<-df
 			}
-			svfile<-paste0(svpth,ss,"_2013_2015.RData")
-			#svfile<-paste0("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/birdData/UDF/",ss,".RData")
+			svfile<-paste0(svpth,ss,"_2006_2015.RData")
 			save(datalst,file=svfile)
 			print(paste("Done with",ss))
-		},spdf=spdf,effort=effort,obsdata=obsdata,seIDflds=seIDflds)
+		},spdf=spdf,effort=effort,obsdata=obsdata,seIDflds=seIDflds,rezz=rezz)
 
 
 ##########################################################################
 
+
+## Checks... Do not run
 fls<-list.files(svpth,pattern="2006_2015")
 spp<-substr(fls,1,4)
 res<-data.frame()
