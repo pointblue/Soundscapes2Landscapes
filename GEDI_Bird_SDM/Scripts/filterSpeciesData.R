@@ -8,9 +8,11 @@
 ## 1) Reattributes with cellId for 250, 500, and 1000m grids - we really don't need these, but just in case
 ## 3) Formats the data and saves individual udf formats for each of the target species
 
+## The results are found in the GitHub repository here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data/Birds/UDF
+
 libs<-c("raster","unmarked","data.table","XLConnect","plyr")
 lapply(libs,require,character.only = TRUE)
-svpth<-"C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/Birds/UDF/"
+svpth<-"C:/temp/data/Birds/UDF/"
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
 # df is the table of records
@@ -40,13 +42,15 @@ fillBlanks<-function(df,ss,comname){
 	return(df)
 }
 
-## data here: effort and obsdata
-load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/S2Ldata/Sonoma/2006_2015_unmergedData.Rdata")
-
-## load the 250, 500 and 1000 grids - remove cellId from the effort table and add these grids' cellIds
+## Must first download the data from the GitHub repository
+# The data file is here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data/2006_2015_unmergedData.Rdata
+load(file="c:/temp/2006_2015_unmergedData.Rdata")
 effort<-effort[,cellId:=NULL]
 
-# load grids
+
+## Download and then read the grids
+# The grids are found here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data/DEM
+# you must download the entire folder of files for each resolution, even though the code below points to just one file. The raster package needs the other files too.
 g250<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/250M/dem_250m.tif")
 g500<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/500M/dem_500m.tif")
 g1000<-raster("C:/Users/lsalas/git/Soundscapes2Landscapes/sdmTool/data/DEM/1000M/dem_1000m.tif")
@@ -56,8 +60,9 @@ effort<-getCellId(df=effort,rast=g250,rez="250")
 effort<-getCellId(df=effort,rast=g500,rez="500")
 effort<-getCellId(df=effort,rast=g1000,rez="1000")
 
-## 2) Make the udfs
-spdf<-try(readWorksheetFromFile("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/kriging/S2L_Sonoma_only_Species_DLadds.xlsx",sheet="Final"))
+## 2) Make the udfs 
+# First must download the file S2L_Sonoma_BirdSpecies.xlsx. It is found here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data/S2L_Sonoma_BirdSpecies.xlsx
+spdf<-try(readWorksheetFromFile("c:/temp/S2L_Sonoma_BirdSpecies.xlsx",sheet="Final"))
 species<-spdf$SpeciesCode; 
 seIDflds<-c("ProjectCode","ProtocolCode","SamplingUnitId","YearCollected","MonthCollected","DayCollected")
 spflds<-c("CommonName","SpeciesCode","ObservationCount")
