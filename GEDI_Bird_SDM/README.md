@@ -28,10 +28,11 @@ This script prepares a batch .csv file where each row contains a unique combinat
 
 
 4. Generate ensemble models for each species, resolution, and bootstrap. There are two ways to do this: with SLURM on HPC (fast and preferred, see a. below) or with FOR loop (see b. below)
-a. Distributed processing with SLURM on an HPC (SDMensemble_batch.R,  SDMensemble_singleBoot.R, S2L_SDMensemble_Sbatch.sh).
+
+ a. Distributed processing with SLURM on an HPC (SDMensemble_batch.R,  SDMensemble_singleBoot.R, S2L_SDMensemble_Sbatch.sh).
 Basically we use SLURM arrays on an HPC to distribute jobs across available machines. The .sh script creates the arrays using a batch file and then passes arguments to SDMensemble_batch.R which parses the arguments and then generates an ensemble using code from SDMensemble_singleBoot.R.
 
-b. Loop (fitSDMensemble_loop.R)
+ b. Loop (fitSDMensemble_loop.R)
 This code uses a simple loop and is mostly for demonstration purposes for users who might not have access to an HPC. This is designed for a single machine but could be parallelized using an R package like doParallel
 
 
