@@ -1,0 +1,591 @@
+---
+title: Results Figures for Burns et al. (2020). Incorporating canopy structure from
+  simulated GEDI lidar into bird species distribution models. Environmental Research Letters. 
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+Author: Patrick Burns [pb463@nau.edu]
+---
+
+Load Libraries
+```{r}
+library(tidyverse)
+library(ggrepel)
+library(corrplot)
+```
+
+Common inputs
+```{r}
+# The species that were run
+specRun = c("ACWO", "AMGO", "BEWR", "BHGR", "BLPH", 
+            "BRBL", "BUSH", "CALT", "CAQU", "CBCH", 
+            "DEJU", "HOFI", "LEGO", "MODO", "NOFL", 
+            "NOMO", "NUWO", "OATI", "RWBL", "SOSP", 
+            "SPTO", "STJA", "WCSP", "WEBL", "WESJ")
+
+# A couple other Ancillary files
+# Species habitat associations
+spec_hab_for = read.csv(file = "//minim.hpc.nau.edu/scratch/pb463/projects/S2L/repos/Soundscapes2Landscapes/sdmTool/data/Ancillary/specRun25_wHab_diet_forStrat.csv")
+# More sensical variable names
+varNamesClean = read.csv(file = "//minim.hpc.nau.edu/scratch/pb463/projects/S2L/repos/Soundscapes2Landscapes/sdmTool/data/Ancillary/varNames_cleaned_afterVIF.csv")
+
+# Git repo path
+gitPath = "//minim.hpc.nau.edu/scratch/pb463/projects/S2L/repos/Soundscapes2Landscapes/"
+
+# Path containing the SDM results
+baseResPath = '//minim.hpc.nau.edu/scratch/pb463/projects/S2L/SDM/results/s20200113/'
+
+# Function to combine all CSV result files together
+compileSpecResults = function(folder, resultSuffix){
+  fileNames = list.files(path = folder, pattern = paste0("*",resultSuffix), full.names = TRUE)
+  df <- do.call(rbind,lapply(fileNames,read.csv))
+}
+
+# Path to save plots
+baseSavePath = paste0(baseResPath, 'plots/')
+if (!dir.exists(baseSavePath)){
+  dir.create(baseSavePath)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+```
+
+Aggregate Results
+```{r}
+# Load in different model scenario GOF results (n bootstraps)
+# with GEDI
+AWG_g = compileSpecResults(folder = paste0(baseResPath, 'All_wGEDI/mergedResults/'), resultSuffix = 'gof')
+# without GEDI
+ANG_g = compileSpecResults(folder = paste0(baseResPath, 'All_woutGEDI/mergedResults/'), resultSuffix = 'gof')
+
+# Load in Importance results (500 iterations)
+AWG_i = compileSpecResults(folder = paste0(baseResPath, 'All_wGEDI/mergedResults/'), resultSuffix = 'imp')
+
+```
+
+Figure 3 - Variable importance aggregated by Habitat Specialization and Variable Type
+```{r}
+SavePath3 = paste0(baseSavePath, 'Fig3_groupedVarImp/')
+if (!dir.exists(SavePath3)){
+  dir.create(SavePath3)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+
+# Join habitat association to importance from all bootstraps
+AWG_i_j = dplyr::left_join(x = AWG_i, y = spec_hab_for, by = "species")
+
+# Also join AUC since we should only look at "good" models
+AWG_i_j$Model = AWG_i$model
+AWG_i_j = dplyr::left_join(x = AWG_i_j, y = AWG_g, by = c("species", "res", "gediYr", "wGEDI", "iter", "Model" ))
+
+# Find the number of times across all iterations that each variable type is in the top 5
+# Specify models to plot. These should have rminer DSA style importance. XGBoost had custom fitting code and therefore we can't use rminer for importance
+selDSAMod = c("RF", "SVM", "Boo", "MLPE", "GLMN", "KNN")
+
+a = combDF_i = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable" & AUC_RM > 0.5 & nFeat >=5 & Imp_DSA > 0) %>%
+  dplyr::group_by(res, varType) %>%
+  summarise(m = mean(Imp_DSA))
+
+# Filter the iterations to exclude response variable and other conditions
+combDF_i = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable" & AUC_RM > 0.5 & nFeat >=5 & Imp_DSA > 0) %>%
+  dplyr::group_by(iter, res, model, species) %>%
+  dplyr::mutate(ranked = dense_rank(desc(Imp_DSA))) %>%
+  dplyr::arrange(iter,species, res, model, ranked) %>%
+  dplyr::filter(ranked <= 5) %>%
+  dplyr::group_by(res,mainHab,varType) %>%
+  dplyr::summarise(ctTop5 = n())
+
+# Summarize proportion of variables available
+varPerc4 = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable") %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(ctTop5 = length(unique(var))) %>%
+  dplyr::mutate(mainHab = "Percent Available")
+
+dummyRow4 = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE"  & mainHab != "Variable" & AUC_RM > 0.5) %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = n()) %>%
+  dplyr::mutate(mainHab = " ")
+#dummyRow2$ctTop5 = 0
+
+# Combine toPlot with varPerc
+toPlot4 = rbind(combDF_i, varPerc4)
+
+# Change spatial res, variable type, and model name to factor
+toPlot4$res_f = factor(toPlot4$res, levels=c('250M','500M','1000M'))
+toPlot4$varTypeRnm = ifelse(toPlot4$varType == "GEDI", "Can. Struct.", 
+                            ifelse(toPlot4$varType == "BCM", "Climate", 
+                                   ifelse(toPlot4$varType == "NDVI", "Phenology", 
+                                          ifelse(toPlot4$varType == "AUX", "Auxiliary", "noVarName"))))
+toPlot4$varTypeRnm = factor(toPlot4$varTypeRnm, levels=c("Can. Struct.", "Climate", "Phenology", "Auxiliary"))
+toPlot4$mainHab_f = factor(toPlot4$mainHab, levels = c("Percent Available", " ", "Conifer", "Oak", "Shrub", "Riparian", "Grass", "Urban"))
+
+# ggplot it
+g= ggplot(toPlot4, aes(fill = varTypeRnm, y = ctTop5, x = reorder(mainHab_f, desc(mainHab_f))))
+g+ theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"), plot.caption = element_text(size = 8), text = element_text(size = 12),
+        legend.position = "top", legend.box = "horizontal", legend.justification = "left", legend.spacing.y = unit(-0.25, "cm"), panel.spacing.x = unit(7, "mm"), 
+        plot.margin=unit(c(0.5,0.5,0.5,0.5),"cm")) +
+  geom_bar(stat="identity", position = "fill",na.rm = TRUE) +
+  facet_grid(~res_f) +
+  coord_flip() +
+  scale_y_continuous(expand=c(0,0), breaks = c(0,0.5,1), labels = c("0", "50", "100")) +
+  #scale_x_continuous() +
+  labs(title = paste0(""), 
+       caption = paste0("500 iterations and 6 models"),
+       x = "Habitat Specialization",
+       y = "Percent of top 5 variables") + 
+  scale_fill_manual(name = "Variable Group", 
+                    values = alpha(c("#e41a1c", "#377eb8", "#4daf4a","#984ea3"), 0.75)) + 
+  geom_vline(xintercept = 6.5, lwd = 1)
+
+
+ggsave(filename = paste0(SavePath3, "ImpTop5_DSA_byHab.png"), plot = last_plot(), 
+       device ="png", width = 10, height = 3.5, 
+       units = "in", dpi = 300)
+
+
+```
+
+
+Figure 4 - Model performance comparison by species and resolution
+```{r}
+SavePath4 = paste0(baseSavePath, 'Fig4_perfComp/')
+if (!dir.exists(SavePath4)){
+  dir.create(SavePath4)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+
+AWG_g$modScen = "All with Canopy Structure"
+AWG_g$fillC = "#e41a1c"
+
+ANG_g$modScen = "All without Canopy Structure"
+ANG_g$fillC = "#377eb8"
+
+# Combine different scenarios into one data frame
+combDF_g = rbind(AWG_g, ANG_g)
+combDF_g$modScen_f = factor(combDF_g$modScen, levels = c("All with Canopy Structure", "All without Canopy Structure"))
+combDF_g$fillC_f = as.factor(combDF_g$fillC)
+combDF_g$res_f = factor(combDF_g$res, levels = c("250M", "500M", "1000M"))
+# Group species manually by habitat association 
+combDF_g$species_f = factor(combDF_g$species, levels = c("BHGR", "BEWR", "MODO", "HOFI", "BRBL", "WCSP", 
+                                                         "CAQU", "CALT", "SOSP", "RWBL", "BLPH", "WESJ",
+                                                         "OATI", "NUWO", "NOMO", "BUSH", "ACWO", "WEBL", 
+                                                         "LEGO", "AMGO", "STJA", "SPTO", "NOFL", "DEJU",
+                                                         "CBCH"))
+
+# Plot all species on same plot
+combDF_g %>% dplyr::filter(Model == "EWA") %>% 
+  dplyr::group_by(modScen, species, res) %>% 
+  ggplot(data = ., aes(x = species_f, y = AUC_RM, color = modScen_f, fill = modScen_f)) + theme_bw() + 
+  theme(legend.position = "none", text = element_text(size=14), panel.spacing = unit(1.5, "lines"), plot.margin=unit(c(2,1,1,1),"cm")) +
+  geom_boxplot(notch = TRUE, width = 0.7, outlier.shape = NA) +
+  labs(x = "", y = "AUC", color = "", fill = "") +
+  coord_flip(ylim=c(0.5, 1)) + 
+  facet_grid(~res_f) +
+  scale_color_manual(values = c("red", "blue")) +
+  scale_y_continuous(expand=c(0,0)) + 
+  scale_fill_manual(values = alpha(c("red", "blue"), 0.3)) +
+  geom_vline(xintercept = seq(1.5,26.5,1)) +
+  stat_summary(fun.y = function(x) {quantile(x,probs=c(0.95), na.rm=TRUE)}, geom = 'point', pch = 4, size = 2, position=position_dodge(0.7)) 
+
+# Save plot
+ggsave(filename = paste0(SavePath4, "AllSpec_allRes_500runs_perfComp.png"),
+       plot = last_plot(),
+       device ="png", width = 8, height = 10, units = "in", dpi = 300)
+
+```
+
+Appendix C - Predictor Variable Correlation 
+```{r}
+SavePathC = paste0(baseSavePath, 'AppC_CorrPlot/')
+if (!dir.exists(SavePathC)){
+  dir.create(SavePathC)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+
+# First need to load in unscaled covardf at right spatial resolution
+load(paste0(gitPath,"sdmTool/data/Birds/250M/unscaled_250M.RData"))
+scaledCovars = scale(covardf[,4:98])
+toPlot_sc = cbind(covardf[,1:3], scaledCovars, covardf[,99:ncol(covardf)])
+toPlot_nosc = covardf
+
+VIFvars250 = c("dem_250M","StreetDistance_250M", "StreamDistance_250M", "CoastDistance_250M", "ndvi_ann_95p_250M", "ndvi_seas_diff_250M", "ndvi_var_250M", "aet_wy2013.2015_q1_OctNovDec_250M", "aet_wy2013.2015_q2_JanFebMar_250M", "aet_wy2013.2015_q3_AprMayJun_250M","aet_wy2013.2015_q4_JulAugSep_250M", "pet_wy2013.2015_q1_OctNovDec_250M", "pet_wy2013.2015_q2_JanFebMar_250M", "ppt_wy2013.2015_q1_OctNovDec_250M", "tmx_wy2013.2015_q1_OctNovDec_250M", "tmn_wy2013.2015_q1_OctNovDec_250M", "noised_niM2_1_2yr_250M", "noised_gLAI010_2yr_250M", "noised_gLAI102_2yr_250M",           "noised_gLAI203_2yr_250M", "noised_gLAI304_2yr_250M", "noised_gVDRm_2yr_250M", "noised_gVDRb_2yr_250M")
+
+# Rename vars
+VIFvars250_rnm = c("DEM","StreetDist", "StreamDist", "CoastDist", "NDVI95p", "NDVIdiff", "NDVIvar", "AETQ1", "AETQ2", "AETQ3","AETQ4", "PETQ1", "PETQ2", "PptQ1", "TmxQ1", "TMnQ1", "BM", "LAI0to10", "LAI10to20", "LAI20to30", "LAI30to40", "VDRM", "VDRB")
+
+# Initial correlation plot for all non-NA pixels (should be all of Sonoma)
+toPlot = toPlot_nosc %>% dplyr::select(c(VIFvars250)) %>% na.omit()
+names(toPlot) = VIFvars250_rnm
+correl = cor(toPlot)
+
+# Save a PNG of the corr plot
+png(paste0(SavePathC, "Correlation_plot_VIF_250m_vars.png"), width = 10, height = 10, units = "in", res = 300, bg = "transparent")
+
+p = corrplot::corrplot(corr = correl, method = "color", addCoef.col = "black", type = "upper", tl.cex = 1.0, number.cex = 0.8)
+
+print(p)
+
+dev.off()
+```
+
+Appendix E - Variable Importance
+```{r}
+SavePathE = paste0(baseSavePath, 'AppE_VarImp/')
+if (!dir.exists(SavePathE)){
+  dir.create(SavePathE)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+
+
+# Remove bad models where AUC <= 0.5? Doesn't appear to make a big difference
+filtAUC = TRUE
+if (filtAUC){
+  filtAUC_val = 0.5
+  filtAUC_title = paste0("(only including AUC > ", filtAUC_val, ")")
+} else {
+  filtAUC_val = -1
+  filtAUC_title = "(including all AUC values)"
+}
+
+# Join habitat association to importance from all bootstraps
+AWG_i_j = dplyr::left_join(x = AWG_i, y = spec_hab_for, by = "species")
+
+# Also join AUC since we should only look at "good" models
+AWG_i_j$Model = AWG_i$model
+AWG_i_j = dplyr::left_join(x = AWG_i_j, y = select(AWG_g, "species", "res", "gediYr", "wGEDI", "iter", "Model","AUC_RM"), by = c("species", "res", "gediYr", "wGEDI", "iter", "Model" ))
+
+# Specify models to plot. These should have rminer DSA style importance
+selDSAMod = c("RF", "SVM", "Boo", "MLPE", "GLMN", "KNN")
+
+# First plot - Aggregated variable importance by species
+# Get rid of response variable (these vals should be 0 anyway)
+toPlot = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(species, res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = sum(Imp_DSA, na.rm = TRUE))
+
+# Summarize proportion of variables available
+varPerc = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = length(unique(var))) %>%
+  dplyr::mutate(species = "Percent Available")
+
+dummyRow = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = n()) %>%
+  dplyr::mutate(species = " ")
+dummyRow$sumIagg_DSA = 0
+
+# Combine toPlot with varPerc
+toPlot = rbind(toPlot, varPerc)
+
+# Change spatial res, variable type, and model name to factor
+toPlot$res_f = factor(toPlot$res, levels=c('250M','500M','1000M'))
+toPlot$varTypeRnm = ifelse(toPlot$varType == "GEDI", "Can. Struct.", 
+                           ifelse(toPlot$varType == "BCM", "Climate", 
+                                  ifelse(toPlot$varType == "NDVI", "Phenology", 
+                                         ifelse(toPlot$varType == "AUX", "Auxiliary", "noVarName"))))
+toPlot$varTypeRnm = factor(toPlot$varTypeRnm, levels=c("Can. Struct.", "Climate", "Phenology", "Auxiliary"))
+toPlot$species_f = factor(toPlot$species, levels = c("Percent Available", " ", "ACWO", "AMGO", "BEWR", "BHGR", "BLPH", "BRBL", "BUSH",
+                                                     "CALT", "CAQU", "CBCH", "DEJU", "HOFI", "LEGO", "MODO",
+                                                     "NOFL", "NOMO", "NUWO", "OATI", "RWBL", "SOSP", "SPTO",
+                                                     "STJA", "WCSP", "WEBL", "WESJ"))
+
+
+# ggplot it
+g= ggplot(toPlot, aes(fill = varTypeRnm, y = sumIagg_DSA, 
+                      x = reorder(species_f, desc(species_f)))) 
+g+ theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"), plot.caption = element_text(size = 8), text = element_text(size = 12),
+        legend.position = "top", legend.box = "horizontal", legend.justification = "left", legend.spacing.y = unit(-0.25, "cm"), panel.spacing.x = unit(7, "mm")) +
+  geom_bar(stat="identity",  position = "fill", na.rm = TRUE) +
+  facet_grid(~res_f) +
+  coord_flip() +
+  scale_y_continuous(expand=c(0,0), breaks = c(0,0.25,0.5,0.75,1.0), labels = c("0", "0.25", "0.5", "0.75", "1")) +
+  #scale_x_reverse() +
+  labs(title = paste0("Aggregated variable importance (DSA method) by Species ", filtAUC_title), 
+       caption = paste0("500 iterations and 6 models"),
+       x = "Species",
+       y = "Aggregated Importance Fraction") + 
+  scale_fill_manual(name = "Variable Group", 
+                    values = alpha(c("#e41a1c", "#377eb8", "#4daf4a","#984ea3"), 0.75)) + 
+  geom_vline(xintercept = 25.5, lwd = 1)
+
+SavePathE1 = paste0(SavePathE, 'ImpAgg_byVarType/')
+if (!dir.exists(SavePathE1)){
+  dir.create(SavePathE1)
+} 
+
+ggsave(filename = paste0(SavePathE, "ImpAgg_byVarType/", 
+                         "ImpAgg_DSA_bySpec.png"), plot = last_plot(), 
+       device ="png", width = 10, height = 10, 
+       units = "in", dpi = 300)
+
+# Second plot - Aggregated variable importance by habitat association
+# Get rid of response variable (these vals should be 0 anyway)
+toPlot2 = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(mainHab, res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = sum(Imp_DSA, na.rm = TRUE))
+
+# Summarize proportion of variables available
+varPerc2 = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = n()) %>%
+  dplyr::mutate(mainHab = "Percent Available")
+
+dummyRow2 = AWG_i_j %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE"  & mainHab != "Variable" & AUC_RM > filtAUC_val) %>%
+  dplyr::group_by(res, varType) %>%
+  dplyr::summarise(sumIagg_DSA = length(unique(var))) %>%
+  dplyr::mutate(mainHab = " ")
+dummyRow2$sumIagg_DSA = 0
+
+# Combine toPlot with varPerc
+toPlot2 = rbind(toPlot2, varPerc2)
+
+# Change spatial res, variable type, and model name to factor
+toPlot2$res_f = factor(toPlot2$res, levels=c('250M','500M','1000M'))
+toPlot2$varTypeRnm = ifelse(toPlot2$varType == "GEDI", "Can. Struct.", 
+                            ifelse(toPlot2$varType == "BCM", "Climate", 
+                                   ifelse(toPlot2$varType == "NDVI", "Phenology", 
+                                          ifelse(toPlot2$varType == "AUX", "Auxiliary", "noVarName"))))
+toPlot2$varTypeRnm = factor(toPlot2$varTypeRnm, levels=c("Can. Struct.", "Climate", "Phenology", "Auxiliary"))
+toPlot2$mainHab_f = factor(toPlot2$mainHab, levels = c("Percent Available", " ", "Conifer", "Oak", "Shrub", "Riparian", "Grass", "Urban"))
+
+# ggplot it
+g= ggplot(toPlot2, aes(fill = varTypeRnm, y = sumIagg_DSA, 
+                       x = reorder(mainHab_f, desc(mainHab_f)))) 
+g+ theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"), plot.caption = element_text(size = 8), text = element_text(size = 12),
+        legend.position = "top", legend.box = "horizontal", legend.justification = "left", legend.spacing.y = unit(-0.25, "cm"), panel.spacing.x = unit(7, "mm")) +
+  geom_bar(stat="identity",  position = "fill", na.rm = TRUE) +
+  facet_grid(~res_f) +
+  coord_flip() +
+  scale_y_continuous(expand=c(0,0), breaks = c(0,0.25,0.5,0.75,1.0), labels = c("0", "0.25", "0.5", "0.75", "1")) +
+  #scale_x_reverse() +
+  labs(title = paste0("Aggregated variable importance (DSA method) by Habitat Specialization ", filtAUC_title), 
+       caption = paste0("500 iterations and 6 models"),
+       x = "Habitat Association",
+       y = "Aggregated Importance Fraction") + 
+  scale_fill_manual(name = "Variable Group", 
+                    values = alpha(c("#e41a1c", "#377eb8", "#4daf4a","#984ea3"), 0.75)) + 
+  geom_vline(xintercept = 6.5, lwd = 1)
+
+ggsave(filename = paste0(SavePathE1, "ImpAgg_DSA_byHab.png"), plot = last_plot(), 
+       device ="png", width = 10, height = 3.5, 
+       units = "in", dpi = 300)
+
+# Specify models to plot. These should have rminer DSA style importance
+selMod = c("RF", "SVM", "Boo", "MLPE", "GLMN", "KNN")
+
+
+# # Third plot - Aggregated IQR variable importance by habitat association
+# Group with cleaned variable names
+Imp_cl = dplyr::left_join(x = AWG_i_j, y = varNamesClean, by = "var")
+# Normalize individual variable importance by an expected value (1 / numberVars)
+toPlot = Imp_cl %>% dplyr::filter(!var %in% c("PresAbs", "PresAbs_f", "TrTe") & model %in% selDSAMod & wGEDI == "TRUE" & mainHab != "Variable" & AUC_RM > filtAUC_val) %>%
+  dplyr::mutate(Imp_DSA_n = 100 * (Imp_DSA - 1/23), Imp_DSA_sc = Imp_DSA*100) %>% # 23 is number of unique vars when Can. Struct. is included
+  dplyr::group_by(cleanName2, mainHab, varType, res) %>% 
+  do(data.frame(t(quantile(.$Imp_DSA_sc, probs = c(0.25,0.5,0.75), na.rm = TRUE)))) %>%
+  dplyr::arrange(varType)
+
+toPlot = na.omit(toPlot)
+toPlot$varTypeRnm = ifelse(toPlot$varType == "GEDI", "Can. Struct.", 
+                           ifelse(toPlot$varType == "BCM", "Climate", 
+                                  ifelse(toPlot$varType == "NDVI", "Phenology", 
+                                         ifelse(toPlot$varType == "AUX", "Auxiliary","noVarName"))))
+toPlot$fullName = factor(paste0(toPlot$varTypeRnm," - ",toPlot$cleanName2))
+
+# Change spatial res, variable type, and model name to factor
+toPlot$res_f = factor(toPlot$res, levels=c('250M','500M','1000M'))
+toPlot$varType = factor(toPlot$varType, levels=c("Can. Struct.", "Climate", "Phenology", "Auxiliary"))
+toPlot$mainHab_f = factor(toPlot$mainHab)
+
+# Get the median importance value of all model runs with and without GEDI
+toPlot_hLine = Imp_cl %>% dplyr::filter(wGEDI == "TRUE" & mainHab != "Variable") %>%
+  dplyr::mutate(Imp_DSA_sc = Imp_DSA*100) %>%
+  dplyr::group_by(res) %>% 
+  do(data.frame(t(quantile(.$Imp_DSA_sc, probs = c(0.5), na.rm = TRUE))))
+toPlot_hLine$res_f = factor(toPlot_hLine$res, levels = c('250M','500M','1000M'))
+
+# Plot IQR importance (DSA method)
+g = ggplot(toPlot, aes(x = fullName, y = X50., color = mainHab_f)) 
+g + theme_bw() + 
+  geom_point(position=position_dodge(width=0.5), size = 2.5) + 
+  geom_errorbar(aes(ymin=X25., ymax=X75.), width = 0.1, position=position_dodge(width=0.5), alpha = 0.33) +
+  geom_hline(data = toPlot_hLine, mapping = aes(yintercept = X50.), lty = 2, size = 1.0, col = "#4d4d4d", alpha = 0.66) +
+  scale_y_continuous(expand=c(0,0)) +
+  scale_color_manual(name = "Hab. Specialization", values=alpha(c("#1b9e77", "#e6ab02", "#66a61e", "#7570b3", "#a6761d", "#d95f02"),0.8)) +
+  labs(title = paste0("Variable Importance IQR (DSA method) by Habitat Specialization"), 
+       subtitle = paste0("500 iterations with all variables including Canopy Structure"),
+       caption = paste0(""),
+       y = "Importance (DSA method)",
+       x = "Group - Metric") +
+  geom_vline(xintercept=c(4.5, 11.5, 20.5), color = "#404040", lwd=1.25) +
+  facet_grid(~res_f) +
+  coord_flip() 
+
+SavePathE3 = paste0(SavePathE, 'ImpAgg_byVar/')
+if (!dir.exists(SavePathE3)){
+  dir.create(SavePathE3)
+} 
+
+ggsave(filename = paste0(SavePathE3, "ImpDSAAgg_byVar", ".png"),
+       plot = last_plot(),
+       device ="png", width = 10, height = 8, units = "in", dpi = 300)
+
+```
+
+Appendix F - Model Performance Comparisons
+```{r}
+SavePathF = paste0(baseSavePath, 'AppF_ModelComps/')
+if (!dir.exists(SavePathF)){
+  dir.create(SavePathF)
+  print("Created directory for output plots")
+} else {
+  print("Directory for output plots already exists")
+}
+
+# Median or 95th percentile AUC by individual model and ensemble. Do for each spatial res
+toTab = AWG_g %>% dplyr::filter(wGEDI == "TRUE" & AUC_RM > 0.5) %>%
+  dplyr::group_by(species, Model, wGEDI, res) %>%
+  dplyr::summarise(p50AUC = median(AUC_RM, na.rm = TRUE),
+                   p95AUC = quantile(AUC_RM, probs = c(0.95), na.rm = TRUE), #change percentile here
+                   sdAUC = sd(AUC_RM))
+
+# Change Model type to factor
+toTab$species_f = factor(toTab$species)
+toTab$Model_f = factor(x = toTab$Model, levels = c("Boo", "GLMN", "KNN", "MLPE", "RF", "SVM", "XGB", "EWA"))
+toTab$res_f = factor(x = toTab$res, levels = c("250M", "500M", "1000M"))
+
+# ggplot median or other percentile value for each species and model (no individual models removed bc of AUC score)
+ggplot(data = toTab, mapping = aes(x = species_f, y = p50AUC, col = Model_f)) + 
+  geom_point(position=position_dodge(width=0.2), size = 3) + 
+  facet_grid(~res_f) + 
+  coord_flip() +
+  theme_bw() + 
+  scale_color_manual(name = "Model", values = alpha(c("#f781bf", "#a65628", "#ffff33", "#ff7f00", "#984ea3", "#4daf4a", "#377eb8", "#e41a1c"), 0.6)) + 
+  labs(title = paste0("All with Canopy Structure - Median Model Performance (500 iterations)"), 
+       caption = c("*Ensemble Weighted Average (EWA) did not incorporate individual models with AUC <= 0.5"),
+       x = "Species",
+       y = "AUC Median") +
+scale_x_discrete(limits = rev(levels(toTab$species_f)))
+
+# Save a copy
+ggsave(filename = paste0(SavePathF, "allSpec_medAUC_byMod.png"), 
+       plot = last_plot(), 
+       device ="png", width = 8, height = 8, units = "in", dpi = 300)
+
+# Export table after reformatting to wide
+for (resSub in unique(toTab$res)){
+  toTab_sub = toTab %>% dplyr::filter(res %in% resSub)
+ toTabSave = reshape2::dcast(data = toTab_sub, formula = species + res + wGEDI ~ Model, value.var = "p95AUC")
+write.csv(x = toTabSave, file = paste0(SavePathF, "p95AUC_allSpec_median_", resSub, ".csv"), row.names = FALSE) # change name to reflect percentile
+}
+
+
+# For individual iterations compare EWA with individual models
+toTab2 = AWG_g %>% dplyr::filter(wGEDI == "TRUE" & AUC_RM > 0.0) %>%
+  dplyr::group_by(species, wGEDI, res, iter) %>%
+  filter(AUC_RM == max(AUC_RM, na.rm = TRUE)) %>%
+  group_by(res, Model) %>%
+  summarise(n = n()) %>%
+  group_by(res) %>%
+  mutate(tot = sum(n)) %>%
+  mutate(frac = n/tot)
+
+# Change Model type to factor
+toTab2$Model_f = factor(x = toTab2$Model, levels = c("Boo", "GLMN", "KNN", "MLPE", "RF", "SVM", "XGB", "EWA"))
+toTab2$res_f = factor(x = toTab2$res, levels = c("250M", "500M", "1000M"))
+
+# ggplot comparison of models
+ggplot(data = toTab2, mapping = aes(x=Model_f, y = n, fill = Model_f)) + 
+  geom_bar(stat = "identity",  na.rm = TRUE) + 
+  facet_grid(~res_f) + 
+  coord_flip() +
+  theme_bw() + 
+  scale_fill_manual(name = "Model", values = alpha(c("#f781bf", "#a65628", "#ffff33", "#ff7f00", "#984ea3", "#4daf4a", "#377eb8", "#e41a1c"), 0.6)) + 
+  labs(title = paste0("Number of times model performed best"), 
+       caption = c(),
+       x = "Model",
+       y = "No. of times Lowest AUC (25 species * 500 iterations)") 
+
+# Save a copy
+ggsave(filename = paste0(SavePathF, "bestAUCcount_byMod.png"), 
+       plot = last_plot(), 
+       device ="png", width = 8, height = 3, units = "in", dpi = 300)
+
+
+# Table comparing performance with and without Canopy Structure
+selIndMod = c("EWA")
+
+# Table of percentiles by species and spatial res
+AWG_g_tab = AWG_g %>% dplyr::filter(Model %in% selIndMod) %>%
+  group_by(species, res) %>%
+  do(data.frame(t(quantile(.$AUC_RM, probs = c(0.05,0.25,0.5,0.75,0.95), na.rm = TRUE)), mean = mean(.$AUC_RM), sd = sd(.$AUC_RM))) %>%
+  dplyr::arrange(species, res)
+
+write.csv(x = AWG_g_tab, file = paste0(SavePathF, "allSpec_withGEDI_AUCperc_byRes.csv"), row.names = FALSE)
+
+ANG_g_tab = ANG_g %>% dplyr::filter(Model %in% selIndMod) %>%
+  group_by(species, res) %>%
+  do(data.frame(t(quantile(.$AUC_RM, probs = c(0.05,0.25,0.5,0.75,0.95), na.rm = TRUE)), mean = mean(.$AUC_RM), sd = sd(.$AUC_RM))) %>%
+  dplyr::arrange(species, res)
+
+write.csv(x = ANG_g_tab, file = paste0(SavePathF, "allSpec_NoGEDI_AUCperc_byRes.csv"), row.names = FALSE)
+
+
+# Scatter plot AUC vs TSS
+selMod = "EWA"
+
+rm(toPlot)
+
+toPlot = AWG_g %>% dplyr::filter(Model == selMod & wGEDI == "TRUE") %>% 
+  dplyr::group_by(species, Model, res, wGEDI) %>%
+  dplyr::summarise(p50AUC = median(AUC_RM, na.rm = TRUE), p50TSS = median(TSS, na.rm = TRUE), 
+                   p25AUC = quantile(AUC_RM, probs = c(0.25), na.rm = TRUE),
+                   p75AUC = quantile(AUC_RM, probs = c(0.75), na.rm = TRUE),
+                   p25TSS = quantile(TSS, probs = c(0.25), na.rm = TRUE),
+                   p75TSS = quantile(TSS, probs = c(0.75), na.rm = TRUE))
+
+toPlot = dplyr::left_join(x = toPlot, y = spec_hab_for, by = "species")
+
+# Change spatial resolution and Model to a factor
+toPlot$spatRes_f = factor(toPlot$res, levels = c('250M','500M','1000M'))
+
+# ggplot it
+g = ggplot(data = toPlot, aes(x = p50AUC, y = p50TSS, label = species, col = mainHab)) 
+g + geom_point() + 
+  geom_errorbar(aes(ymin = p25TSS, ymax = p75TSS), alpha = 0.33) + 
+  geom_errorbarh(aes(xmin = p25AUC, xmax = p75AUC), alpha = 0.33) +  
+  #geom_text(aes(label=species), col="#0000ff", size = 2, position=position_jitter(width=0.02,height=0.02)) +
+  facet_grid(~spatRes_f) +
+  #scale_x_continuous(limits = c(-1,1.0)) + 
+  #scale_y_continuous(limits = c(-1, 1)) +
+  scale_color_manual(values=c("#1b9e77", "#e6ab02", "#66a61e", "#7570b3", "#a6761d", "#d95f02", "#e7298a")) +
+  labs(title = paste0(selMod, " - AUC vs TSS for all Species"), 
+       caption = c("Points correspond to median \n Bars correspond to Interquartile Range"),
+       x = "AUC",
+       y = "TSS",
+       col = "Habitat") +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"), plot.caption = element_text(size = 8)) +
+  ggrepel::geom_text_repel(segment.color = "grey", segment.alpha = 0.7, size=2, point.padding = 1.0)
+
+# save plot
+ggsave(filename = paste0(SavePathF, "Allspec_AUCvsTSS_", selMod, ".png"), 
+       plot = last_plot(), 
+       device ="png", width = 10, height = 4, units = "in", dpi = 300)
+
+```
+
