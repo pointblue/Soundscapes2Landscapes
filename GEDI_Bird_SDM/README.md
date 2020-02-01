@@ -1,8 +1,8 @@
-#Bird species distribution models using GEDI data
-##Github documentation for the analyses and results presented in the paper:  
-##Incorporating canopy structure from simulated GEDI lidar into bird species distribution models
+# Bird species distribution models using GEDI data  
+## Github documentation for the analyses and results presented in the paper:  
+## Incorporating canopy structure from simulated GEDI lidar into bird species distribution models  
 
-###Authors:
+### Authors:  
 Patrick Burns - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA; corresponding author (Patrick.Burns@nau.edu)
 Matthew Clark - Geography, Environment & Planning, Sonoma State University, Rohnert Park, CA, USA
 Leonardo Salas - Point Blue Conservation Science, Petaluma, CA, USA
@@ -13,7 +13,7 @@ Ralph Dubayah - Department of Geographical Sciences, University of Maryland, Col
 Scott J. Goetz - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA
 
 
-###Desciption:
+### Desciption:  
 We use a combination of R and bash scripts to run species distribution models (SDM). 
 The following R packages are required for running a single bootstrap SDM:
 caret, data.table, dismo, doParallel, dplyr, fmsb, ggplot2, kernlab, lmtest, optparse, plyr, psych, randomForest, raster, rminer, spThin, unmarked, xgboost, XLConnect 
