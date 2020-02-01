@@ -9,6 +9,7 @@ Bash scripts utilize SLURM Workload Manager (https://slurm.schedmd.com/documenta
 
 
 Below we outline the steps for running SDMs
+
 0. Gather bird species observation (getAKNdata.R)
 This script queries the Avian Knowledge Network (AKN) database, hosted by Point Blue. We constrained the query with certain date and survey filters. We also include survey effort information. Since the database is managed by Point Blue and not accessible by public query we do not include this script. The map linked below, however, may be useful for visualizing observations in the AKN database:
 http://avianknowledge.net/index.php/observations-map/
