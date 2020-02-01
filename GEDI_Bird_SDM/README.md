@@ -27,7 +27,7 @@ This script attributes a table of bird observations (at each grid resolution) wi
 This script prepares a batch .csv file where each row contains a unique combination of arguments to be passed to the SDM ensemble script. For 25 species, 3 spatial resolutions, and 500 bootstraps we have a batch file with 37,500 model scenarios. 
 
 
-4. Generate ensemble models for each species, resolution, and bootstrap. There are two ways to do this: with SLURM on HPC (fast and preferred, see a. below) or with FOR loop (see b. below) 
+4. Generate ensemble models for each species, resolution, and bootstrap. There are two ways to do this: with SLURM on HPC (fast and preferred, see a. below) or with FOR loop (see b. below)
 a. Distributed processing with SLURM on an HPC (SDMensemble_batch.R,  SDMensemble_singleBoot.R, S2L_SDMensemble_Sbatch.sh).
 Basically we use SLURM arrays on an HPC to distribute jobs across available machines. The .sh script creates the arrays using a batch file and then passes arguments to SDMensemble_batch.R which parses the arguments and then generates an ensemble using code from SDMensemble_singleBoot.R.
 
