@@ -1,0 +1,26 @@
+species,commName,mainHab,mainDiet,forStrat,diet_wforStrat
+ACWO,Acorn Woodpecker,Oak,PlantSeed,Above 2m,PlantSeed-Above 2m
+AMGO,American Goldfinch,Grass,PlantSeed,Below 2m,PlantSeed-Below 2m
+BEWR,Bewick's Wren,Variable,Invertebrate,Below 2m,Invertebrate-Below 2m
+BHGR,Black-headed Grosbeak,Variable,Invertebrate,Above 2m,Invertebrate-Above 2m
+BLPH,Black Phoebe,Riparian,Invertebrate,Below 2m,Invertebrate-Below 2m
+BRBL,Brewer's Blackbird,Urban,Invertebrate,Below 2m,Invertebrate-Below 2m
+BUSH,Bushtit,Oak,Invertebrate,Mixed,Invertebrate-Mixed
+CALT,California towhee,Shrub,PlantSeed,Below 2m,PlantSeed-Below 2m
+CAQU,California Quail,Shrub,PlantSeed,Below 2m,PlantSeed-Below 2m
+CBCH,Chestnut-backed Chickadee,Conifer,Invertebrate,Above 2m,Invertebrate-Above 2m
+DEJU,Dark-eyed Junco,Conifer,PlantSeed,Below 2m,PlantSeed-Below 2m
+HOFI,House Finch,Urban,PlantSeed,Below 2m,PlantSeed-Below 2m
+LEGO,Lesser Goldfinch,Grass,PlantSeed,Below 2m,PlantSeed-Below 2m
+MODO,Mourning Dove,Urban,PlantSeed,Below 2m,PlantSeed-Below 2m
+NOFL,Northern Flicker,Conifer,Invertebrate,Below 2m,Invertebrate-Below 2m
+NOMO,Northern Mockingbird,Oak,Omnivore,Below 2m,Omnivore-Below 2m
+NUWO,Nuttall’s Woodpecker,Oak,Invertebrate,Below 2m,Invertebrate-Below 2m
+OATI,Oak Titmouse,Oak,Invertebrate,Above 2m,Invertebrate-Above 2m
+RWBL,Red-winged Blackbird,Riparian,Omnivore,Below 2m,Omnivore-Below 2m
+SOSP,Song Sparrow,Riparian,Omnivore,Below 2m,Omnivore-Below 2m
+SPTO,Spotted towhee,Conifer,Omnivore,Below 2m,Omnivore-Below 2m
+STJA,Steller's Jay,Conifer,Omnivore,Below 2m,Omnivore-Below 2m
+WCSP,White-crowned Sparrow,Shrub,PlantSeed,Below 2m,PlantSeed-Below 2m
+WEBL,Western Bluebird,Grass,Invertebrate,Below 2m,Invertebrate-Below 2m
+WESJ,Western Scrub-jay,Oak,Omnivore,Below 2m,Omnivore-Below 2m

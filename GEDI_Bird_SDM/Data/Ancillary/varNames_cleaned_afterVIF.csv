@@ -1,0 +1,122 @@
+var,cleanName,cleanName2,varGroup
+aet_wy2013.2015_q1_OctNovDec_1000M,AETQ1_1000m,AETQ1,Climate
+aet_wy2013.2015_q1_OctNovDec_250M,AETQ1_250m,AETQ1,Climate
+aet_wy2013.2015_q1_OctNovDec_500M,AETQ1_500m,AETQ1,Climate
+aet_wy2013.2015_q2_JanFebMar_1000M,AETQ2_1000m,AETQ2,Climate
+aet_wy2013.2015_q2_JanFebMar_250M,AETQ2_250m,AETQ2,Climate
+aet_wy2013.2015_q2_JanFebMar_500M,AETQ2_500m,AETQ2,Climate
+aet_wy2013.2015_q3_AprMayJun_1000M,AETQ3_1000m,AETQ3,Climate
+aet_wy2013.2015_q3_AprMayJun_250M,AETQ3_250m,AETQ3,Climate
+aet_wy2013.2015_q3_AprMayJun_500M,AETQ3_500m,AETQ3,Climate
+aet_wy2013.2015_q4_JulAugSep_1000M,AETQ4_1000m,AETQ4,Climate
+aet_wy2013.2015_q4_JulAugSep_250M,AETQ4_250m,AETQ4,Climate
+aet_wy2013.2015_q4_JulAugSep_500M,AETQ4_500m,AETQ4,Climate
+CoastDistance_1000M,CoastDist_1000m,CoastDist,AUX
+CoastDistance_250M,CoastDist_250m,CoastDist,AUX
+CoastDistance_500M,CoastDist_500m,CoastDist,AUX
+dem_1000M,DEM_1000m,DEM,AUX
+dem_250M,DEM_250m,DEM,AUX
+dem_500M,DEM_500m,DEM,AUX
+NA,NA,NA,NA
+ndvi_ann_95p_1000M,NDVI95p_1000m,NDVI95p,Phenology
+ndvi_ann_95p_250M,NDVI95p_250m,NDVI95p,Phenology
+ndvi_ann_95p_500M,NDVI95p_500m,NDVI95p,Phenology
+ndvi_seas_diff_1000M,NDVIdiff_1000m,NDVIdiff,Phenology
+ndvi_seas_diff_250M,NDVIdiff_250m,NDVIdiff,Phenology
+ndvi_seas_diff_500M,NDVIdiff_500m,NDVIdiff,Phenology
+ndvi_var_1000M,NDVIvar_1000m,NDVIvar,Phenology
+ndvi_var_250M,NDVIvar_250m,NDVIvar,Phenology
+ndvi_var_500M,NDVIvar_500m,NDVIvar,Phenology
+noised_gLAI010_1yr_1000M,LAI0to10_1yr_1000m,LAI0to10,Can. Struct.
+noised_gLAI010_1yr_250M,LAI0to10_1yr_250m,LAI0to10,Can. Struct.
+noised_gLAI010_1yr_500M,LAI0to10_1yr_500m,LAI0to10,Can. Struct.
+noised_gLAI010_2yr_1000M,LAI0to10_2yr_1000m,LAI0to10,Can. Struct.
+noised_gLAI010_2yr_250M,LAI0to10_2yr_250m,LAI0to10,Can. Struct.
+noised_gLAI010_2yr_500M,LAI0to10_2yr_500m,LAI0to10,Can. Struct.
+noised_gLAI010_3yr_1000M,LAI0to10_3yr_1000m,LAI0to10,Can. Struct.
+noised_gLAI010_3yr_250M,LAI0to10_3yr_250m,LAI0to10,Can. Struct.
+noised_gLAI010_3yr_500M,LAI0to10_3yr_500m,LAI0to10,Can. Struct.
+noised_gLAI102_1yr_1000M,LAI10to20_1yr_1000m,LAI10to20,Can. Struct.
+noised_gLAI102_1yr_250M,LAI10to20_1yr_250m,LAI10to20,Can. Struct.
+noised_gLAI102_1yr_500M,LAI10to20_1yr_500m,LAI10to20,Can. Struct.
+noised_gLAI102_2yr_1000M,LAI10to20_2yr_1000m,LAI10to20,Can. Struct.
+noised_gLAI102_2yr_250M,LAI10to20_2yr_250m,LAI10to20,Can. Struct.
+noised_gLAI102_2yr_500M,LAI10to20_2yr_500m,LAI10to20,Can. Struct.
+noised_gLAI102_3yr_1000M,LAI10to20_3yr_1000m,LAI10to20,Can. Struct.
+noised_gLAI102_3yr_250M,LAI10to20_3yr_250m,LAI10to20,Can. Struct.
+noised_gLAI102_3yr_500M,LAI10to20_3yr_500m,LAI10to20,Can. Struct.
+noised_gLAI203_1yr_1000M,LAI20to30_1yr_1000m,LAI20to30,Can. Struct.
+noised_gLAI203_1yr_250M,LAI20to30_1yr_250m,LAI20to30,Can. Struct.
+noised_gLAI203_1yr_500M,LAI20to30_1yr_500m,LAI20to30,Can. Struct.
+noised_gLAI203_2yr_1000M,LAI20to30_2yr_1000m,LAI20to30,Can. Struct.
+noised_gLAI203_2yr_250M,LAI20to30_2yr_250m,LAI20to30,Can. Struct.
+noised_gLAI203_2yr_500M,LAI20to30_2yr_500m,LAI20to30,Can. Struct.
+noised_gLAI203_3yr_1000M,LAI20to30_3yr_1000m,LAI20to30,Can. Struct.
+noised_gLAI203_3yr_250M,LAI20to30_3yr_250m,LAI20to30,Can. Struct.
+noised_gLAI203_3yr_500M,LAI20to30_3yr_500m,LAI20to30,Can. Struct.
+noised_gLAI304_1yr_1000M,LAI30to40_1yr_1000m,LAI30to40,Can. Struct.
+noised_gLAI304_1yr_250M,LAI30to40_1yr_250m,LAI30to40,Can. Struct.
+noised_gLAI304_1yr_500M,LAI30to40_1yr_500m,LAI30to40,Can. Struct.
+noised_gLAI304_2yr_1000M,LAI30to40_2yr_1000m,LAI30to40,Can. Struct.
+noised_gLAI304_2yr_250M,LAI30to40_2yr_250m,LAI30to40,Can. Struct.
+noised_gLAI304_2yr_500M,LAI30to40_2yr_500m,LAI30to40,Can. Struct.
+noised_gLAI304_3yr_1000M,LAI30to40_3yr_1000m,LAI30to40,Can. Struct.
+noised_gLAI304_3yr_250M,LAI30to40_3yr_250m,LAI30to40,Can. Struct.
+noised_gLAI304_3yr_500M,LAI30to40_3yr_500m,LAI30to40,Can. Struct.
+noised_gVDRb_1yr_1000M,VDRB_1yr_1000m,VDRB,Can. Struct.
+noised_gVDRb_1yr_250M,VDRB_1yr_250m,VDRB,Can. Struct.
+noised_gVDRb_1yr_500M,VDRB_1yr_500m,VDRB,Can. Struct.
+noised_gVDRb_2yr_1000M,VDRB_2yr_1000m,VDRB,Can. Struct.
+noised_gVDRb_2yr_250M,VDRB_2yr_250m,VDRB,Can. Struct.
+noised_gVDRb_2yr_500M,VDRB_2yr_500m,VDRB,Can. Struct.
+noised_gVDRb_3yr_1000M,VDRB_3yr_1000m,VDRB,Can. Struct.
+noised_gVDRb_3yr_250M,VDRB_3yr_250m,VDRB,Can. Struct.
+noised_gVDRb_3yr_500M,VDRB_3yr_500m,VDRB,Can. Struct.
+noised_gVDRm_1yr_1000M,VDRM_1yr_1000m,VDRM,Can. Struct.
+noised_gVDRm_1yr_250M,VDRM_1yr_250m,VDRM,Can. Struct.
+noised_gVDRm_1yr_500M,VDRM_1yr_500m,VDRM,Can. Struct.
+noised_gVDRm_2yr_1000M,VDRM_2yr_1000m,VDRM,Can. Struct.
+noised_gVDRm_2yr_250M,VDRM_2yr_250m,VDRM,Can. Struct.
+noised_gVDRm_2yr_500M,VDRM_2yr_500m,VDRM,Can. Struct.
+noised_gVDRm_3yr_1000M,VDRM_3yr_1000m,VDRM,Can. Struct.
+noised_gVDRm_3yr_250M,VDRM_3yr_250m,VDRM,Can. Struct.
+noised_gVDRm_3yr_500M,VDRM_3yr_500m,VDRM,Can. Struct.
+noised_niM2_1_1yr_1000M,BM_1yr_1000m,BM,Can. Struct.
+noised_niM2_1_1yr_250M,BM_1yr_250m,BM,Can. Struct.
+noised_niM2_1_1yr_500M,BM_1yr_500m,BM,Can. Struct.
+noised_niM2_1_2yr_1000M,BM_2yr_1000m,BM,Can. Struct.
+noised_niM2_1_2yr_250M,BM_2yr_250m,BM,Can. Struct.
+noised_niM2_1_2yr_500M,BM_2yr_500m,BM,Can. Struct.
+noised_niM2_1_3yr_1000M,BM_3yr_1000m,BM,Can. Struct.
+noised_niM2_1_3yr_250M,BM_3yr_250m,BM,Can. Struct.
+noised_niM2_1_3yr_500M,BM_3yr_500m,BM,Can. Struct.
+noised_rhGss2_1yr_1000M,RH02_1yr_1000m,RH02,Can. Struct.
+noised_rhGss2_1yr_250M,RH02_1yr_250m,RH02,Can. Struct.
+noised_rhGss2_1yr_500M,RH02_1yr_500m,RH02,Can. Struct.
+noised_rhGss2_2yr_1000M,RH02_2yr_1000m,RH02,Can. Struct.
+noised_rhGss2_2yr_250M,RH02_2yr_250m,RH02,Can. Struct.
+noised_rhGss2_2yr_500M,RH02_2yr_500m,RH02,Can. Struct.
+noised_rhGss2_3yr_1000M,RH02_3yr_1000m,RH02,Can. Struct.
+noised_rhGss2_3yr_250M,RH02_3yr_250m,RH02,Can. Struct.
+noised_rhGss2_3yr_500M,RH02_3yr_500m,RH02,Can. Struct.
+pet_wy2013.2015_q1_OctNovDec_1000M,PETQ1_1000m,PETQ1,Climate
+pet_wy2013.2015_q1_OctNovDec_250M,PETQ1_250m,PETQ1,Climate
+pet_wy2013.2015_q1_OctNovDec_500M,PETQ1_500m,PETQ1,Climate
+pet_wy2013.2015_q2_JanFebMar_1000M,PETQ2_1000m,PETQ2,Climate
+pet_wy2013.2015_q2_JanFebMar_250M,PETQ2_250m,PETQ2,Climate
+pet_wy2013.2015_q2_JanFebMar_500M,PETQ2_500m,PETQ2,Climate
+ppt_wy2013.2015_q1_OctNovDec_1000M,PptQ1_1000m,PptQ1,Climate
+ppt_wy2013.2015_q1_OctNovDec_250M,PptQ1_250m,PptQ1,Climate
+ppt_wy2013.2015_q1_OctNovDec_500M,PptQ1_500m,PptQ1,Climate
+StreamDistance_1000M,StreamDist_1000m,StreamDist,AUX
+StreamDistance_250M,StreamDist_250m,StreamDist,AUX
+StreamDistance_500M,StreamDist_500m,StreamDist,AUX
+StreetDistance_1000M,StreetDist_1000m,StreetDist,AUX
+StreetDistance_250M,StreetDist_250m,StreetDist,AUX
+StreetDistance_500M,StreetDist_500m,StreetDist,AUX
+tmn_wy2013.2015_q1_OctNovDec_1000M,TMnQ1_1000m,TMnQ1,Climate
+tmn_wy2013.2015_q1_OctNovDec_250M,TMnQ1_250m,TMnQ1,Climate
+tmn_wy2013.2015_q1_OctNovDec_500M,TMnQ1_500m,TMnQ1,Climate
+tmx_wy2013.2015_q1_OctNovDec_1000M,TMxQ1_1000m,TMxQ1,Climate
+tmx_wy2013.2015_q1_OctNovDec_250M,TMxQ1_250m,TMxQ1,Climate
+tmx_wy2013.2015_q1_OctNovDec_500M,TMxQ1_500m,TMxQ1,Climate
