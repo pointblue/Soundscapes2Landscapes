@@ -3,15 +3,22 @@
 # Author: lsalas
 ###############################################################################
 
+## This code file does the following:
+# 	prepare the stack
+# 	convert to df with cellId
+# 	load the bird files at each spatial resolution
+# 	starting with 250M resolution, determine the variables to include with VIF
+# 	use that same set of variables at all resolutions
+# 	merge and save
 
-# prepare the stack
-# convert to df with cellId
-# load the bird files at each rez
-# starting with 250M resolution, determine the variables to include with VIF
-# use that same set of variables at all resolutions
-# merge and save
+#Resulting datasets can be found in the GitHub repository here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data/Birds/UDF
+
+## DEPENDENCIES:
+# Download the raster data from GitHub. These are found here: https://github.com/leosalas/Soundscapes2Landscapes/tree/master/GEDI_Bird_SDM/Data
+# The code assues these are saved in "c:/c:/temp/sdmTool/data/"
+
 library(raster); library(fmsb);library(plyr)
-rpth<-"c:/S2Ltemp/sdmTool/data/"
+rpth<-"c:/temp/sdmTool/data/"
 rezz<-c("500M","250M","1000M") 
 auxvars<-c("dem","StreetDistance","StreamDistance","CoastDistance")
 ndvivars<-c("_ann_05p","_ann_95p","_ann_med","_ann_min","_seas_diff","_sum","_var")
@@ -21,7 +28,7 @@ bcmperiods<-c("_q1_OctNovDec","_q2_JanFebMar","_q3_AprMayJun","_q4_JulAugSep")
 gediyr<-c("_2yr_")	
 gedinoise<-"noised_"
 gedivars<-c("rhGss2","rhGss26","rhGss50","rhGss76","rhGss98","cover","FHDcan","FHDcnHs","gssHlfC","FHD","FHDhist","niM2","gVDRt","niM2_1","gLAI010","gLAI102","gLAI203","gLAI304","gVDRm","gVDRb")
-birdfiles<-"c:/S2Ltemp/sdmTool/data/Birds/UDF/"
+birdfiles<-"c:/temp/sdmTool/data/Birds/UDF/"
 
 
 ## This function retrieves the cellId for the cell within which each observation was made, for a given raster
