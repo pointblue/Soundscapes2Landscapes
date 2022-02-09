@@ -31,6 +31,11 @@ pathToLocalGit<-"c:/users/lsalas/git/S2L_devel/"
 ## Need the utility matching functions
 source(paste0(pathToLocalGit,"GVanalyses/3models2outputs/scripts/predMatching_utils.R"))
 
+## If using ROI data, use the files:
+# c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/noPretrainROIPerformance_06102021.RData
+# c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/WithPretrainROIPerformance_06102021.RData
+## DO NOT use the no/With..PretrainROIPerformance_corrected_06222021.RData because these use all the RI data, not just the test ROIs
+
 ##########################
 ## PR curves
 
@@ -59,7 +64,7 @@ summdf<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
 prdf<-subset(summdf,PredictionFilter=="h65")
 
 # need to add the BirdNET data
-load(file="c:/users/lsalas/git/S2L_devel/GVanalyses/BirdNet/data/BirdNET_GV_matches_06102021.RData")
+load(file=paste0(pathToLocalGit,"GVanalyses/BirdNet/data/BirdNET_GV_matches_06102021.RData"))
 bndf<-summarizeByHurdle(allmatches=bngvmatches,bySpecies="no",summarizeToSample=summarizeToSample,summarizeToEvent=summarizeToEvent,sumLevel="clip",beta=0.5)
 bndf$Treatment<-"Uncorrected"; bndf$Model<-"BirdNET"
 prplot<-rbind(prdf[,names(bndf)],bndf)
@@ -159,7 +164,7 @@ dev.new();print(mdp)
 
 ###########################
 ## Table of performance metrics
-load(file="c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/noPretrainGVPerformance_06072021.RData")
+load(file=paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/noPretrainGVPerformance_06072021.RData"))
 noPretrainGV<-summarizeByHurdle(allmatches=gvmatches,bySpecies="no",summarizeToSample=summarizeToSample,summarizeToEvent,sumLevel="clip",beta=0.5)
 noPretrainGV$ModelType<-"Not Pre-trained"
 noPretrainGV$Treatment<-"Uncorrected"
