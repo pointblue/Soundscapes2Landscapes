@@ -40,11 +40,18 @@ source(paste0(pathToLocalGit,"GVanalyses/3models2outputs/scripts/predMatching_ut
 ## PR curves
 
 ## Looping through hurdle value filters, then by model
-load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj658095_10262021.RData"))
+#load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj658095_10262021.RData"))
+load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj65809599_lch5099_04022022.RData"))
 hfilts<-names(gvpreadadjlst)
-summdf<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
+gvpreadadjlst<-llply(hfilts,function(hnm,gvpreadadjlst){
 			hfdf<-gvpreadadjlst[[hnm]]
-			mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
+			hfdf<-subset(hfdf,lchurd==0.50)
+			return(hfdf)
+		},gvpreadadjlst=gvpreadadjlst)
+names(gvpreadadjlst)<-hfilts
+summdf<-ldply(hfilts,function(hnm,gvpreadadjlst){
+			hfdf<-gvpreadadjlst[[hnm]]
+			mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf){
 						matches<-subset(hfdf,Model==mdl)
 						adjmatches<-matches[,which(names(matches)!="match")]
 						names(adjmatches)<-gsub("adjMatch","match",names(adjmatches))
@@ -55,14 +62,17 @@ summdf<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
 						mtdf<-rbind(metricsraw,metricsadj)
 						mtdf$Model<-mdl
 						return(mtdf)
-					},hfdf=hfdf,summarizeToSampleAllSpecies=summarizeToSampleAllSpecies)
+					},hfdf=hfdf)
 			mdldf$PredictionFilter<-hnm
 			return(mdldf)
-		},gvpreadadjlst=gvpreadadjlst,summarizeToSampleAllSpecies=summarizeToSampleAllSpecies)
+		},gvpreadadjlst=gvpreadadjlst)
 
 ## Use only PredictionFilter==h65
-prdf<-subset(summdf,PredictionFilter=="h65")
+prdf<-subset(summdf,PredictionFilter=="h65")  ## This is all models on all species combined. By this I mean that we look at all the TP, FP, and FN from all species and models combined to assess performance
 
+
+
+########################################
 # need to add the BirdNET data
 load(file=paste0(pathToLocalGit,"GVanalyses/BirdNet/data/BirdNET_GV_matches_06102021.RData"))
 bndf<-summarizeByHurdle(allmatches=bngvmatches,bySpecies="no",summarizeToSample=summarizeToSample,summarizeToEvent=summarizeToEvent,sumLevel="clip",beta=0.5)
@@ -86,7 +96,7 @@ dev.new();print(p2)
 ## F05 curves plot
 ### Construct the PR curve for 3 species: facet by species, curves are pretrained 3 models, dot shows the max
 hfdf<-gvpreadadjlst[["h65"]]
-mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
+mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf){
 			matches<-subset(hfdf,Model==mdl)
 			adjmatches<-matches[,which(names(matches)!="match")]
 			names(adjmatches)<-gsub("adjMatch","match",names(adjmatches))
@@ -97,7 +107,7 @@ mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
 			mtdf<-rbind(metricsraw,metricsadj)
 			mtdf$Model<-mdl
 			return(mtdf)
-		},hfdf=hfdf,summarizeToSampleAllSpecies=summarizeToSampleAllSpecies)
+		},hfdf=hfdf)
 mdlcorrdf<-subset(mdldf,Treatment=="Corrected")
 mFbsp<-aggregate(Fbeta~SpeciesCode+Model,data=mdlcorrdf,max)
 wFbsp<-reshape(mFbsp,idvar="SpeciesCode",timevar="Model",direction="wide")
@@ -106,14 +116,24 @@ names(wFbsp)<-c("SpeciesCode","MobileNet","Resnet101","Resnet50")
 wFbsp<-subset(wFbsp,SpeciesCode != "SOSP")
 
 #Now loop through each species and identify the top model and the hurdle value for it
+#m1>m2, m1>m3 -> a
+#m1=m2, m1>m3 -> a
+#m1>m2, m1=m3 -> a
+#m2>m1, m2>m3 -> b
+#m2>m1, m2=m3 -> b
+#m2=m1, m2>m3 -> ?
+#m3>m1, m3>m2 -> c
+#m3=m1, m3>m2 -> c
+#m3>m1, m3=m2 -> c
+#m3=m1, m3=m2 -> c
 mxFbsp<-ldply(wFbsp$SpeciesCode,function(ss,wFbsp,plotdataBySpecies){
 			tdf<-subset(wFbsp,SpeciesCode==ss)
-			m1<-tdf$MobileNet;m2<-tdf$Resnet101;m3<-tdf$Resnet50
-			if(m1>m2 && m1>m3){
+			m1<-tdf$MobileNet;m1<-ifelse(is.na(m1),0,m1);m2<-tdf$Resnet101;m2<-ifelse(is.na(m2),0,m2);m3<-tdf$Resnet50;m3<-ifelse(is.na(m3),0,m3)
+			if((m1>m2 && m1>m3) | (m1==m2 && m1>m3) | (m1>m2 && m1==m3)){
 				pdbs<-subset(mdlcorrdf,Model=="MobileNet::sigmoid" & SpeciesCode==ss)
 				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
 				rdf<-data.frame(SpeciesCode=ss,ModelName="MobileNet",Fbeta=m1,Threshold=hurdval)
-			}else if(m2>m1 && m2>m3){
+			}else if((m2>m1 && m2>m3) | (m2>m1 && m2==m3) | (m2==m1 && m2>m3)){
 				pdbs<-subset(mdlcorrdf,Model=="Resnet101::sigmoid" & SpeciesCode==ss)
 				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
 				rdf<-data.frame(SpeciesCode=ss,ModelName="Resnet101",Fbeta=m2,Threshold=hurdval)
@@ -158,7 +178,21 @@ dev.new();print(pF)
 ###########################
 ## Matt's dot-plot
 mFbsp$ModelName<-ifelse(mFbsp$Model=="MobileNet::sigmoid","MobileNet",ifelse(mFbsp$Model=="Resnet101::sigmoid","Resnet101","Resnet50"))
-mdp<-ggplot(subset(mFbsp,SpeciesCode!="SOSP"),aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName),size=3) + coord_flip() +
+mdpdf<-subset(mFbsp,SpeciesCode!="SOSP")   ## Excluding SOSP because of poor performance
+
+################################################################
+## Use this if only including the species with enough GV data ##
+################################################################
+## Excluding SOSP because of poor performance   "SOSP",
+gvspp<-c("ACWO","AMCR","AMRO","BEWR","BGGN","BHGR","BTYW","CALT","CAQU","CASJ","CAVI","CBCH","CORA","COYE","DEJU","EUCD","HOFI","MAWR","MODO","OATI","OCWA",
+		"PAWR","PSFL","RWBL","SAVS","SPTO","STJA","WAVI","WBNU","WCSP","WEME","WETA","WITU","WIWA","WREN")
+mdpdf<-subset(mdpdf, SpeciesCode %in% gvspp)
+################################################################
+
+## All species regarding of GV evaluation = 46
+## With above filter = 35  
+
+mdp<-ggplot(mdpdf,aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName),size=3) + coord_flip() +
 		theme_bw() + labs(x="",y=paste0("F(","\u03b2","=0.5)"),color="Model")
 dev.new();print(mdp)
 
@@ -338,9 +372,9 @@ if(file.exists(difffilen)){
 	load(difffilen)
 }else{
 	hfilts<-names(gvpreadadjlst)
-	summdfev<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
+	summdfev<-ldply(hfilts,function(hnm,gvpreadadjlst){
 				hfdf<-gvpreadadjlst[[hnm]]
-				mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
+				mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf){
 							matches<-subset(hfdf,Model==mdl)
 							adjmatches<-matches[,which(names(matches)!="match")]
 							names(adjmatches)<-gsub("adjMatch","match",names(adjmatches))
@@ -351,10 +385,10 @@ if(file.exists(difffilen)){
 							mtdf<-rbind(metricsraw,metricsadj)
 							mtdf$Model<-mdl
 							return(mtdf)
-						},hfdf=hfdf,summarizeToSampleAllSpecies=summarizeToSampleAllSpecies)
+						},hfdf=hfdf)
 				mdldf$PredictionFilter<-hnm
 				return(mdldf)
-			},gvpreadadjlst=gvpreadadjlst,summarizeToSampleAllSpecies=summarizeToSampleAllSpecies)
+			},gvpreadadjlst=gvpreadadjlst)
 	
 	## Use only PredictionFilter==h65
 	prdf<-subset(summdfev,PredictionFilter=="h65")
