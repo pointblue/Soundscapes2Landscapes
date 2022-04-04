@@ -3,14 +3,14 @@
 ## Incorporating canopy structure from simulated GEDI lidar into bird species distribution models  
 
 ### Authors:  
-Patrick Burns - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA; corresponding author (Patrick.Burns@nau.edu)
-Matthew Clark - Geography, Environment & Planning, Sonoma State University, Rohnert Park, CA, USA
-Leonardo Salas - Point Blue Conservation Science, Petaluma, CA, USA
-Steven Hancock - School of Geosciences, The University of Edinburgh, Edinburgh, Scotland
-Patrick Jantz - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA
-David Leland - Madrone Audubon Society, Santa Rosa, CA
-Ralph Dubayah - Department of Geographical Sciences, University of Maryland, College Park, MD
-Scott J. Goetz - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA
+Patrick Burns - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA; corresponding author (Patrick.Burns@nau.edu)  
+Matthew Clark - Geography, Environment & Planning, Sonoma State University, Rohnert Park, CA, USA  
+Leonardo Salas - Point Blue Conservation Science, Petaluma, CA, USA  
+Steven Hancock - School of Geosciences, The University of Edinburgh, Edinburgh, Scotland  
+Patrick Jantz - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA  
+David Leland - Madrone Audubon Society, Santa Rosa, CA, USA  
+Ralph Dubayah - Department of Geographical Sciences, University of Maryland, College Park, MD  
+Scott J. Goetz - School of Informatics, Computing & Cyber Systems, Northern Arizona University, Flagstaff, AZ, USA  
 
 
 ### Desciption:  
