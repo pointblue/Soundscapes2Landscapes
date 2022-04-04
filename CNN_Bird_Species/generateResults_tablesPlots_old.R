@@ -1,6 +1,6 @@
 # TODO: Add comment
 # 
-# Author: lsalas
+# Author: lsalas, mclarck
 ###############################################################################
 
 #### This file produces all the tables and results shown in the CNN paper - we will include in a notebook
@@ -40,8 +40,15 @@ source(paste0(pathToLocalGit,"GVanalyses/3models2outputs/scripts/predMatching_ut
 ## PR curves
 
 ## Looping through hurdle value filters, then by model
-load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj658095_10262021.RData"))
+#load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj658095_10262021.RData"))
+load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj65809599_lch5099_04022022.RData"))
 hfilts<-names(gvpreadadjlst)
+gvpreadadjlst<-llply(hfilts,function(hnm,gvpreadadjlst){
+			     hfdf<-gvpreadadjlst[[hnm]]
+			     hfdf<-subset(hfdf,lchurd==0.50)
+			     return(hfdf)
+		},gvpreadadjlst=gvpreadadjlst)
+names(gvpreadadjlst)<-hfilts
 summdf<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
 			hfdf<-gvpreadadjlst[[hnm]]
 			mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
@@ -161,7 +168,21 @@ ggsave("C:/Users/salasle/git/Soundscapes2Landscapes/CNN_Bird_Species/three_speci
 ###########################
 ## Optimal threshold dot-plot by species, 3 models
 mFbsp$ModelName<-ifelse(mFbsp$Model=="MobileNet::sigmoid","MobileNetv2",ifelse(mFbsp$Model=="Resnet101::sigmoid","ResNet101v2","ResNet50v2"))
-mdp<-ggplot(subset(mFbsp,SpeciesCode!="SOSP"),aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName),size=3) + coord_flip() +
+mdpdf<-subset(mFbsp,SpeciesCode!="SOSP")
+
+################################################################
+## Use this if only including the species with enough GV data ##
+################################################################
+## Excluding SOSP because of poor performance   "SOSP",
+gvspp<-c("ACWO","AMCR","AMRO","BEWR","BGGN","BHGR","BTYW","CALT","CAQU","CASJ","CAVI","CBCH","CORA","COYE","DEJU","EUCD","HOFI","MAWR","MODO","OATI","OCWA",
+	 "PAWR","PSFL","RWBL","SAVS","SPTO","STJA","WAVI","WBNU","WCSP","WEME","WETA","WITU","WIWA","WREN")
+mdpdf<-subset(mdpdf,SpeciesCode %in% gvspp)
+################################################################
+
+## All species corrected regardless of GV evaluation = 46
+## With the above filter - all species with enough GV data to evaluate = 35
+
+mdp<-ggplot(mdpdf,aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName),size=3) + coord_flip() +
   theme_bw() + labs(x="",y=paste0("F(","\u03b2","=0.5)"),color="Model") +
   scale_colour_brewer(palette = "Set2") +
   scale_x_discrete(limits = rev(unique(sort(mFbsp$SpeciesCode))))
@@ -631,5 +652,7 @@ p2da<-ggplot(subset(ptdata, Threshold<=0.99),aes(x=Threshold, y=Prec)) + facet_w
 
 ggsave("C:/Users/salasle/git/Soundscapes2Landscapes/CNN_Bird_Species/Pre-training_precision_vs_threshold.png", width = 7, height = 5, units = "in", dpi=600)
 
+
+### End of Matt's code
 
 
