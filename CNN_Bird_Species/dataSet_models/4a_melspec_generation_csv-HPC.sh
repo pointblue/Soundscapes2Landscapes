@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-# mfcc_generation.sh
+# melspec_generation_csv-HPC.sh
 # ----- ABOUT -----
 # By Colin Quinn, NAU
 # cq73@gmail.com
@@ -10,22 +10,22 @@
 
 # - SLURM -
 #SBATCH --time=00:02:00
-#SBATCH --output='/projects/tropics/users/cquinn/s2l/code/mfcc_generation/melspec_generation.out'
+#SBATCH --output='/projects/tropics/users/cquinn/s2l/code/melspec_generation/melspec_generation.out'
 
 echo "Entering first slurm script"
 # --- SLURM Settings ---
 arrayLim=2500 # how many array jobs to have at once
 files_per_task=1 # how large each job should be, number of files
-timeReq="00:15:00"
-memoryReq="1GB"
+timeReq="00:15:00" # time for each task
+memoryReq="1GB" # Mem for each task
 
 # where output, first .sh script will be written to
-script_dir='/projects/tropics/users/cquinn/s2l/code/mfcc_generation/bash/'
+script_dir='/projects/tropics/users/cquinn/s2l/code/melspec_generation/bash/'
 
 # --- DATA & RESULT DIR Settings ---
 # CSV                                                 
 todo_csv='/projects/tropics/users/cquinn/s2l/melspecs/toDo_melspecs.csv' 
-num_files=28
+num_files=200
 audio_dir='/scratch/cq73/projects/S2L/audio/'
 wav_ext='.WAV'
 results_dir='/projects/tropics/users/cquinn/s2l/melspecs/melspecs_2020-2021/'
@@ -34,7 +34,7 @@ results_dir='/projects/tropics/users/cquinn/s2l/melspecs/melspecs_2020-2021/'
 # --- Data preprocessing ---
 date_time=`date +%Y%m%d_%H%M%S`
 #num_files=$(find $data_dir -type f | wc -l) # the number of files
-echo "Working data dir : "$tod_csv
+echo "Working data dir : "$todo_csv
 echo "Number of files = "$num_files
 
 ntask=$(echo "scale=2 ; $num_files / $files_per_task" | bc) # calculate how many jobs there should be
@@ -50,18 +50,19 @@ slurmLogName=$script_dir'logs/'$date_time'_%a.out'
 
 # --- SLURM ARRAY ---
 # Create the slurm array job script in the slurm folder
-scriptName='sbatch_mfcc_gen_'$date_time'.sh'
+scriptName='sbatch_melspec_gen_'$date_time'.sh'
 
 cat > $scriptName <<EOT
 #!/bin/bash
 
+# Submit melspec python generation tasks based on total files / task size
 # - SLURM -
-#SBATCH --job-name=mels
-#SBATCH --output=$slurmLogName
-#SBATCH --partition=core
-#SBATCH --time=$timeReq
-#SBATCH --mem=$memoryReq
-#SBATCH --array=[1-$njobs]%$arrayLim
+#SBATCH --job-name=melGen               # SLURM name
+#SBATCH --output=$slurmLogName          # output file for each SLURM task
+#SBATCH --partition=core                # HPC spec
+#SBATCH --time=$timeReq                 # pass time req
+#SBATCH --mem=$memoryReq                # pass mem req
+#SBATCH --array=[1-$njobs]%$arrayLim    # how many tasks will run throttled by arrayLim (aka number of tasks running at once)
 
 start=$(date +%s)
 date_time_inner=`date +%Y%m%d_%H%M%S`
@@ -75,13 +76,13 @@ echo
 
 # - MODULES -
 module load anaconda3/2020.07
-conda activate mfcc
+conda activate melspec
 
 
 echo
 echo "---------Entering script---------"
 # --- SCRIPT ---
-python3.7 /projects/tropics/users/cquinn/s2l/code/mfcc_generation/mfcc_generation_2021_csv.py \$SLURM_ARRAY_TASK_ID $files_per_task $todo_csv $results_dir $audio_dir $wav_ext
+python3.7 /projects/tropics/users/cquinn/s2l/code/mfcc_generation/4b_melspec_generation_csv.py \$SLURM_ARRAY_TASK_ID $files_per_task $todo_csv $results_dir $audio_dir $wav_ext
 
 # - ENDING -
 echo "Ended at:"
