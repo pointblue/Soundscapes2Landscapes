@@ -24,13 +24,13 @@ print("libraries loaded...")
 import sys
 import glob
 
-# retrieve slurm commnads
-slurm_id=int(sys.argv[1])
-chunk_size=int(sys.argv[2])
-todo_csv=sys.argv[3]
-out_dir=sys.argv[4]
-audio_dir=sys.argv[5]
-wav_ext=sys.argv[6]
+# retrieve slurm commands
+slurm_id=int(sys.argv[1]) # determines how many tasks/instances of this script to run 
+chunk_size=int(sys.argv[2]) # how many recordings to process in one task
+todo_csv=sys.argv[3] # csv vector of recordings to process
+out_dir=sys.argv[4] # where to save melspecs
+audio_dir=sys.argv[5] # where recordings are located
+wav_ext=sys.argv[6] # specific file extensions (.wav or .WAV, here)
 
 print("Slurm ID =", slurm_id)
 print("Chunk size =", chunk_size)
@@ -99,7 +99,6 @@ def create_melSpecs(audio_samples = None, FMIN = 0, FMAX = 11025, HOP_SIZE = 128
         ax.set_axis_off()
         fig.add_axes(ax)
 
-  
         S = librosa.feature.melspectrogram(y=y_21k, sr=22050, n_mels=128,fmin = 0,
                                      fmax=11025, n_fft=728, hop_length=32, win_length = None, htk = True) # hop length lesser the better
 
