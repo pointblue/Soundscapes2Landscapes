@@ -14,7 +14,7 @@
 #SBATCH --partition=core
 #SBATCH --time=06:00:00                                   # long processing time here
 #SBATCH --mem=16GB                                        # tasks are highly variable but rarely hit 16 GB  
-#SBATCH --cpus-per-task=4                                 
+#SBATCH --cpus-per-task=4                                 # allow 4 parallel CPUs; hardcoded line 61 in warbler_XC.R                             
 #SBATCH --chdir=/scratch/cq73/projects/S2L/cnn_pretrain/
 #SBATCH --array=[1-106]                                   # number of classes/folders in XC dataset (AM = 153 or NZ = 106)
 
