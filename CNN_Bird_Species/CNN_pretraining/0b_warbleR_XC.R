@@ -1,11 +1,11 @@
 ll = "/home/cq73/R/3.5/"
-library(warbleR, lib.loc = ll)
-library(dplyr, lib.loc = ll)
-library(tidyr, lib.loc = ll)
+.libPaths(c( .libPaths(), ll))
+library(warbleR)
+library(dplyr)
+library(tidyr)
 
 # FEED IN EACH CLASS FROM SBATCH - index related to the number of classes in the parent dir 
 ##########################################
-## Use this section on monsoon
 args = commandArgs(TRUE)
 # load array folder
 ## load directories and index on Slurm ID
@@ -15,7 +15,7 @@ parent_dir = args[2]
 outdir = args[3]
 
 # where .wav files live within class subfolders
-workdir = list.dirs(parent_dir)[slurm_id + 1]
+workdir = list.dirs(parent_dir)[slurm_id]
 
 # get class name
 temp = strsplit(workdir,"/")[[1]]
@@ -23,7 +23,7 @@ temp_len = length(temp)
 temp = temp[[temp_len]]
 
 # where outputs will live
-outfile = paste0(outdir, temp, "_warbleR_ad.csv") #dir, class, file name
+outfile = paste0(outdir, temp, "_warbleR_autodetec.csv") #dir, class, file name
 
 # list sound files to analyze
 targets = list.files(workdir, full.names = FALSE, pattern = c(".mp3")) # list mp3 files
