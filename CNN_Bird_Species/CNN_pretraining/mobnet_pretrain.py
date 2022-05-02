@@ -1,8 +1,6 @@
 #!/scratch/cq73/.conda/envs/tfgpu/bin/ python3.7
 # coding: utf-8
 
-# In[1]:
-
 import tensorflow as tf
 import IPython.display as display
 from PIL import Image
@@ -28,6 +26,7 @@ print("Entering data prep....")
 ###################################
 ##### DATA INPUTS AND OUTPUTS #####
 # Set up training data with pre-split melspec partitions
+# validation = 150 if class has >= 750 pngs or 20% if <750
 tr_pth = '/projects/tropics/users/cquinn/s2l/XC_cnn_pretrain/warbleR_rand_val150/training/'
 data_dir = pathlib.Path(tr_pth)
 image_count = len(list(data_dir.glob('*/*.png')))
@@ -46,8 +45,8 @@ out_dir = '/scratch/cq73/projects/S2L/cnn_pretrain/results/'
 modName = 'mobnetv2_saved_model_xc2_warbleR_rand_val150'
 
 # modeling params
-initial_epochs = 1
-fine_tune_epochs = 1
+initial_epochs = 10
+fine_tune_epochs = 10
 
 ###########################
 ##### DEFS FOR SCRIPT #####
@@ -82,12 +81,8 @@ def prepare_for_training(ds, cache=True, shuffle_buffer_size=1000, repeat=1):
   ds = ds.shuffle(buffer_size=shuffle_buffer_size)
 
   # Repeat forever
-  ds = ds.repeat(repeat)     # repeat has arg 'count' = A tf.int64 scalar tf.Tensor, representing the number of times the dataset should be repeated. The default behavior (if count is None or -1) is for the dataset be repeated indefinitely.
-
+  ds = ds.repeat(repeat) 
   ds = ds.batch(BATCH_SIZE)
-
-  # `prefetch` lets the dataset fetch batches in the background while the model
-  # is training.
   ds = ds.prefetch(buffer_size=AUTOTUNE)
 
   return ds
@@ -191,9 +186,7 @@ model = tf.keras.Sequential([
 
 base_learning_rate = 0.0001 #the initial learning rate. This will be reduced by a factor of 10 in the Finetuning stage
 
-model.compile(#optimizer=tf.keras.optimizers.RMSprop(lr=base_learning_rate),
-              optimizer = tf.keras.optimizers.Adam(lr=base_learning_rate),
-              #loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),         #Whether to interpret y_pred as a tensor of logit values. By default, we assume that y_pred contains probabilities (i.e., values in [0, 1]). **Note - Using from_logits=True may be more numerically stable.
+model.compile(optimizer = tf.keras.optimizers.Adam(lr=base_learning_rate),
               metrics=tf.keras.metrics.CategoricalAccuracy(),
               loss=tf.keras.losses.BinaryCrossentropy(from_logits=True))         #Whether to interpret y_pred as a tensor of logit values. By default, we assume that y_pred contains probabilities (i.e., values in [0, 1]). **Note - Using from_logits=True may be more numerically stable.           
         
