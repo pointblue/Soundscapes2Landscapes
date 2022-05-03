@@ -25,13 +25,13 @@ tf.__version__
 
 # system arguments from bash script
 # retrieve slurm commnads
-slurm_id=int(sys.argv[1])
-chunk_size=int(sys.argv[2])
-todo_csv=sys.argv[3]
-out_dir=sys.argv[4]
-model_path = sys.argv[5]
-logs_path = sys.argv[6]
-mel_storage = '/projects/tropics/users/cquinn/s2l/melspecs/'
+slurm_id=int(sys.argv[1]) # 0-n based on number of tasks to run this script simulataneously
+chunk_size=int(sys.argv[2]) # number of files to predict / n tasks 
+todo_csv=sys.argv[3] # the csv with names folders contains melspecs for incomplete recording
+out_dir=sys.argv[4] # where to save predictions
+model_path = sys.argv[5] # where current CNN model is saved
+logs_path = sys.argv[6] # output of job progress
+mel_storage = '/projects/tropics/users/cquinn/s2l/melspecs/' # where parent melspec directory is. Contains directories from todo_csv var 
 
 print("Slurm ID =", slurm_id)
 print("Chunk size =", chunk_size)
@@ -42,15 +42,15 @@ print("CNN checkpoint =",model_path)
 print("Error logs will print to :", logs_path)
 
 # start and stop files based on slurm ID and chunk size from bash script
-start_index = (slurm_id-1) * chunk_size
-end_index = (slurm_id * chunk_size) - 1
+start_index = (slurm_id-1) * chunk_size # adjust index from 1 to 0
+end_index = (slurm_id * chunk_size) - 1 # shift last file -1 
 print("Start pos = ",start_index)
 print("End pos =",end_index)
 
 # input melspecs, dependent on slurm array task ID
 todo_csv = pd.read_csv(todo_csv, names = ['toDo'])
 
-# mel dirs: a direcotry for each recording with 59 mel spectrograms (1-s overlap, 2-s length, name = time start)
+# mel dirs: a directory for each recording with 59 mel spectrograms (1-s overlap, 2-s length, name = <timeStart>.png [i.e., 0.png])
 mel_dirs = todo_csv.loc[start_index+1:end_index+1]['toDo'].tolist()
 
 print("\nLoaded audio files...")
@@ -125,7 +125,7 @@ for i in range(len(mel_dirs)):
             fname = str(j)+'.png' # files are named 0-59 so simple loop works
             mel_names.append(fname)
             
-            # read in pngusing process_path fx and tf
+            # read in png using process_path fx and tf
             img_ = process_path(os.path.join(mel_store, fname), IMG_HEIGHT = 224, IMG_WIDTH = 224)
             img_ = tf.reshape(img_, shape= (1, IMG_HEIGHT, IMG_WIDTH, 3))
   
@@ -136,7 +136,7 @@ for i in range(len(mel_dirs)):
             sigmoid_pred = tf.math.sigmoid(pred).numpy()           
             sigmoid_pred_lst.append(sigmoid_pred)
             
-        # save predictions in a small pkl  
+        # save predictions in a small pkl for each recording where row = melspec and col = bird spp 1:54 
         joblib.dump(sigmoid_pred_lst, out_path_temp)
         print('Saved this file at:', out_path_temp, "Length was:",len(sigmoid_pred_lst))
   
@@ -153,6 +153,3 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 today = date.today()
 print("Today's date:", today)
-
-
-
