@@ -11,7 +11,7 @@ P-I: Dr. Matthew L. Clark (<matthew.clark@sonoma.edu>)
 - If you want to use the pre-built S2L_54 Dataset, you can download it from Zenodo. Details are mentioned in the Dataset section below and the Zenodo DOI, above. 
 
 #### [CNN_pretraining](CNN_Bird_Species/CNN_pretraining/)
-- Data used were from the BirdCLEF dataset, https://www.kaggle.com/datasets/imoore/xenocanto-bird-recordings-dataset
+- Data used were from the xeno-canto dataset, https://www.kaggle.com/datasets/imoore/xenocanto-bird-recordings-dataset
 - Identify ROIs from xeno-canto data using R’s warbleR
 - Pretrain ImageNet CNNs using xeno-canto ROIs
 
