@@ -12,7 +12,7 @@ Supporting code, metadata, dataset and models used for analyses contained in DOI
 - Identify ROIs from xeno-canto data using R’s warbleR
 - Pretrain ImageNet CNNs using xeno-canto ROIs
 
-#### [Conda_envs](/Conda_envs/)
+#### [Conda_envs](Conda_envs/)
 - Install python conda environments
 
 ***
