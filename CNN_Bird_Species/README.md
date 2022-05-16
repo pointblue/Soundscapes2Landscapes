@@ -42,30 +42,6 @@ Other scripts in repository demonstrate Xeno-Canto acoustic pre-training, warble
 - [warbleR_XC.sh](CNN_Bird_Species/CNN_pretraining/) / [warbleR_XC.R](CNN_Bird_Species/CNN_pretraining/): acoustic event detection in the Xeno-Canto dataset on an HPC. The result is a csv for each recording that is then used in the melspec generation set of scripts (1_fromCSV_toROIs_toMegaWavs.py, 2_generateROI-Melspecs.py, 3_generateAugmentedTrSamples.py).
 - CNN_Pretraining.zip: Pre-train the three networks on the other open-source Datasets mentioned in the Paper.
 
-#### 4. DATASET:
-The S2L_45 dataset was created as a part of a larger effort of monitoring biodiversity through the Soundscapes2Landscapes (S2L) project. The project seeks to advance animal biodiversity monitoring by making use of Earth-observing satellites. The availability of inexpensive MEMS sound recorders that capture audio of sufficient quality has made possible the scaling of research from single locations and organisms, to full animal communities across landscapes. Indeed, the broad geographic scale of the Soundscapes to Landscapes (S2L) project is pioneering.
-<p align="center">
-<img src="melspecs_s2l.png" width="336" height="512"/>
-</p>
-
-Link to the Zenodo Repository and other details here: 
-
-The dataset consists of two parts (1) the S2L ROI data set and (2) the Soundscape Validation dataset as follows:
-1. ROI set - Regions of Interests with labels are annotated by expert birders and bounded in time and frequency. Provided in zenodo are .wav files and .png mel spectrograms.
-2. Soundscape Validation (SV) set - One-minute clips with minute-level coarse labeling of all the species present.
-
-<b>Dataset information</b>:
-- Number of Classes: 54 species
-- Total Number of ROIs: 79,888 ROIs
-- Total Number of SV-set clips: 661 recordings
-- Total number of SV identifications: 18,992 ROIs
-- Total Classes identified in SV dataset: 36 species
-- Location: Sonoma County, CA, USA
-- Sites: 1,236 
-- Audio Recorder: AudioMoth and LG Phone Recorders 
-- Sample Frequency: 44,100 Hz (LG phone) 48,000 Hz (Audiomoth)
-
-
 ***
 ## TO DO:
 - [ ] Add Zenodo DOIs to lines 2 and 51
