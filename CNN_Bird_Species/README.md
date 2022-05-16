@@ -11,8 +11,9 @@ P-I: Dr. Matthew L. Clark (<matthew.clark@sonoma.edu>)
 - If you want to use the pre-built S2L_54 Dataset, you can download it from Zenodo. Details are mentioned in the Dataset section below and the Zenodo DOI, above. 
 
 #### [CNN_pretraining](CNN_Bird_Species/CNN_pretraining/)
-- Identify ROIs from Xeno-Canto data using R’s warbleR
-- Pretrain ImageNet CNNs using Xen-Canto ROIs
+- Data used were from the BirdCLEF dataset, https://www.kaggle.com/datasets/imoore/xenocanto-bird-recordings-dataset
+- Identify ROIs from xeno-canto data using R’s warbleR
+- Pretrain ImageNet CNNs using xeno-canto ROIs
 
 #### [Conda_envs](CNN_Bird_Species/Conda_envs/)
 - Install python conda environments
@@ -34,8 +35,8 @@ To build the Dataset from scratch, use the following three notebooks/python code
 - [2_generateROI-Melspecs.py](CNN_Bird_Species/dataSet_models/): Use the Megawavs created above and chop them into desirable duration ROIs. We convert them into 2-sec ROIs sampled at 22050 Hz. We convert them into .png Mel Spectrograms here.
 - [3_generateAugmentedTrSamples.py](CNN_Bird_Species/dataSet_models/): To increase the amount of training data and make models more robust, we perform class-wise overlaid data augmentation techniques that is briefly explained in the paper
 
-#### 3. CNN Xeno-Canto Pre-training and HPC processing
-Other scripts in repository demonstrate Xeno-Canto acoustic pre-training, warbleR acoustic event detection, and data processing implementation on a local HPC. These scripts use a bash .sh script to submit a python or R script on the HPC cluster using a SLURM scheduler:
+#### 3. CNN xeno-canto Pre-training and HPC processing
+Other scripts in repository demonstrate xeno-canto acoustic pre-training, warbleR acoustic event detection, and data processing implementation on a local HPC. These scripts use a bash .sh script to submit a python or R script on the HPC cluster using a SLURM scheduler:
 - [4a_melspec_generation_csv-HPC.sh](CNN_Bird_Species/dataSet_models/) / [4b_melspec_generation_csv.py](CNN_Bird_Species/dataSet_models/): generate all S2L mel spectrograms on HPC setup.
 - [5a_inference_with_csv-HPC.sh](CNN_Bird_Species/dataSet_models/) / [5b_inference_HPC_model_with_csv.sh](CNN_Bird_Species/dataSet_models/): run prediction on S2L mel spectrogram dataset using HPC setup.
 - [cnn_pretrain_gpus.sh](CNN_Bird_Species/CNN_pretraining/) / [mobnet_pretrain.py](CNN_Bird_Species/CNN_pretraining/): pre-train, here, an ImageNetv2 weighted MobileNetv2 architecture using Xeno-Canto data on an HPC.
