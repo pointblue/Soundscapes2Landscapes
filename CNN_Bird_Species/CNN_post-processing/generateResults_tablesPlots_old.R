@@ -1,47 +1,53 @@
 # TODO: Add comment
 # 
-# Author: lsalas, mclarck
+# Author: Leo Salas (lsalas@pointblue.org) & Matthew Clark (matthew.clark@sonoma.edu)
 ###############################################################################
 
-#### This file produces all the tables and results shown in the CNN paper - we will include in a notebook
+#### This file produces all the tables and results shown in the CNN paper
+
+## Using soundscape test data vs ROI test data
+# Here we use soundcape test data throughout, because the AI models are trained to predict very well against the ROI test set
+# yet they do not predict as well against a random set of data from our recordings (the soundscape data). We believe that this difference is due to our
+# choice of training data, which resulted in recordings with very clear sounds and distinct calls, thus not generalizing as well to the reality
+# of complex and noisy environments in most of our recordings.
 
 ## Data files:
 # logisticCorrModels_fullHour065_predAdj658095_10262021.RData
-# This file contains the GV results, and adjusted results after logistic correction using
+# This file contains the results of predictions tested against the soundscape data, adjusting results after logistic correction using
 # 65% threshold for the covariate data of the logistic model, and a 50% penalization of the logistic prediction
+# Clearly, we can get better results by increasing either or both penalization thresholds, but this low-level 
+# penalization illustrates well the effect of our approach.
+# Source:
 
 # BirdNET_GV_matches_06102021.RData
-# This is the evaluation of the BirdNET predictions against the GV data.
+# This is the evaluation of the BirdNET predictions against the soundscape data.
+# Source:
 
 # noPretrainGVPerformance_06072021.RData
 # this is the evaluation of model predictions against GV (without logistic correction)
+# Source:
 
 # Correction_FPdifference_minuteLevel.RData
 # this compares the rate of FP between the logistic-corrected predictions vs not corrected at the minute level
+# Source:
 
-## IN EACH CASE EXPLAIN WHY NOT USING ROI data???
-## INDICATE FIGURE NUMBER
 
 ##########################
 
 libs<-c("ggplot2","plyr","dplyr","RColorBrewer")
 suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE))
-pathToLocalGit<-"c:/users/salasle/git/S2L_devel/"
+
+pathToLocalGit<-"c:/users/lsalas/git/Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/"  #point to your local git clone
 
 ## Need the utility matching functions
-source(paste0(pathToLocalGit,"GVanalyses/3models2outputs/scripts/predMatching_utils.R"))
+source(paste0(pathToLocalGit,"/scripts/predMatching_utils.R"))
 
-## If using ROI data, use the files:
-# c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/noPretrainROIPerformance_06102021.RData
-# c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/WithPretrainROIPerformance_06102021.RData
-## DO NOT use the no/With..PretrainROIPerformance_corrected_06222021.RData because these use all the RI data, not just the test ROIs
 
-##########################
-## PR curves
+##################################################################
+## FIGURE 5
 
 ## Looping through hurdle value filters, then by model
-#load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj658095_10262021.RData"))
-load(paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/logisticCorrModels_fullHour065_predAdj65809599_lch5099_04022022.RData"))
+load(paste0(pathToLocalGit,"data/logisticCorrModels_fullHour065_predAdj65809599_lch5099_04022022.RData"))
 hfilts<-names(gvpreadadjlst)
 gvpreadadjlst<-llply(hfilts,function(hnm,gvpreadadjlst){
 			     hfdf<-gvpreadadjlst[[hnm]]
@@ -71,26 +77,24 @@ summdf<-ldply(hfilts,function(hnm,gvpreadadjlst,summarizeToSampleAllSpecies){
 prdf<-subset(summdf,PredictionFilter=="h65")
 
 # need to add the BirdNET data
-load(file=paste0(pathToLocalGit,"GVanalyses/BirdNet/data/BirdNET_GV_matches_06102021.RData"))
+load(file=paste0(pathToLocalGit,"data/BirdNET_GV_matches_06102021.RData"))
 bndf<-summarizeByHurdle(allmatches=bngvmatches,bySpecies="no",summarizeToSample=summarizeToSample,summarizeToEvent=summarizeToEvent,sumLevel="clip",beta=0.5)
 bndf$Treatment<-"Uncorrected"; bndf$Model<-"BirdNET"
 prplot<-rbind(prdf[,names(bndf)],bndf)
 
-#need to make pretty... ONLY GV results included - not all species, not all records
-# why not use the ROI data??
-p1<-ggplot(prplot,aes(x=hurdle, y=Prec)) + 
+p1<-ggplot(subset(prplot,hurdle<=0.99),aes(x=hurdle, y=Prec)) + 
 		geom_line(aes(color=Treatment),size=2) +
 		labs(x="Threshold", y="Precision",color="Treatment") + theme_bw() +
 		facet_wrap(~Model, ncol=2)
-p2<-ggplot(prplot,aes(x=Sens, y=Prec)) + 
+p2<-ggplot(subset(prplot,hurdle<=0.9999),aes(x=Sens, y=Prec)) + 
 		geom_line(aes(color=Treatment),size=2,) +
 		labs(x="Recall", y="Precision",color="Treatment") + theme_bw() +
 		facet_wrap(~Model, ncol=2)
-print(p1)
+dev.new();print(p1)
 dev.new();print(p2)
 
 ###########################
-## F05 curves plot
+## FIGURE 6 - F05 curves plot
 ### Construct the PR curve for 3 species: facet by species, curves are pretrained 3 models, dot shows the max
 hfdf<-gvpreadadjlst[["h65"]]
 mdldf<-ldply(unique(hfdf$Model),function(mdl,hfdf,summarizeToSampleAllSpecies){
@@ -116,11 +120,12 @@ wFbsp<-subset(wFbsp,SpeciesCode != "SOSP")
 mxFbsp<-ldply(wFbsp$SpeciesCode,function(ss,wFbsp,plotdataBySpecies){
 			tdf<-subset(wFbsp,SpeciesCode==ss)
 			m1<-tdf$MobileNetv2;m2<-tdf$ResNet101v2;m3<-tdf$ResNet50v2
-			if(m1>m2 && m1>m3){
+			m1<-ifelse(is.na(m1),0,m1);m2<-ifelse(is.na(m2),0,m2);m3<-ifelse(is.na(m3),0,m3)
+			if(m1>=m2 && m1>=m3){
 				pdbs<-subset(mdlcorrdf,Model=="MobileNet::sigmoid" & SpeciesCode==ss)
 				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
 				rdf<-data.frame(SpeciesCode=ss,ModelName="MobileNetv2",Fbeta=m1,Threshold=hurdval)
-			}else if(m2>m1 && m2>m3){
+			}else if(m2>m1 && m2>=m3){
 				pdbs<-subset(mdlcorrdf,Model=="Resnet101::sigmoid" & SpeciesCode==ss)
 				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
 				rdf<-data.frame(SpeciesCode=ss,ModelName="ResNet101v2",Fbeta=m2,Threshold=hurdval)
@@ -132,6 +137,63 @@ mxFbsp<-ldply(wFbsp$SpeciesCode,function(ss,wFbsp,plotdataBySpecies){
 			if(nrow(rdf)>1){rdf<-subset(rdf,Threshold==max(rdf$Threshold))}
 			return(rdf)
 		},wFbsp=wFbsp,plotdataBySpecies=plotdataBySpecies)
+
+############### Parenthesis
+## This to make Table 2 and Figure 8 - below  
+bySpeciesMxFbsp<-ldply(mxFbsp$SpeciesCode,function(ss,mxFbsp,mdldf){
+			tmxfb<-subset(mxFbsp,SpeciesCode==ss)
+			mdlmxfb<-ifelse(tmxfb$ModelName=="MobileNetv2","MobileNet::sigmoid",ifelse(tmxfb$ModelName=="ResNet50v2","Resnet50::sigmoid","Resnet101::sigmoid"))
+			hrdmxfb<-tmxfb$Threshold
+			fbetamx<-tmxfb$Fbeta
+			sppmxfb<-subset(mdldf,SpeciesCode==ss & Model==mdlmxfb & hurdle==hrdmxfb)
+			ucspmxfb<-subset(sppmxfb,Treatment=="Uncorrected")
+			crspmxfb<-subset(sppmxfb,Treatment=="Corrected")
+			bspmxfb<-data.frame(SpeciesCode=ss,maxFbeta=fbetamx,Threshold=hrdmxfb,Model=tmxfb$ModelName,corrPrecision=crspmxfb$Prec,corrRecall=crspmxfb$Sens,uncorrPrecision=ucspmxfb$Prec,uncorRecall=ucspmxfb$Sens)
+			return(bspmxfb)
+		},mxFbsp=mxFbsp,mdldf=mdldf)
+
+# repeat for the uncorrected
+mdluncorrdf<-subset(mdldf,Treatment=="Uncorrected")
+umFbsp<-aggregate(Fbeta~SpeciesCode+Model,data=mdluncorrdf,max)
+uwFbsp<-reshape(umFbsp,idvar="SpeciesCode",timevar="Model",direction="wide")
+names(uwFbsp)<-c("SpeciesCode","MobileNetv2","ResNet101v2","ResNet50v2")
+## CANNOT DO SOSP...
+uwFbsp<-subset(uwFbsp,SpeciesCode != "SOSP")
+
+#Now loop through each species and identify the top model and the hurdle value for it
+umxFbsp<-ldply(uwFbsp$SpeciesCode,function(ss,uwFbsp,plotdataBySpecies){
+			tdf<-subset(uwFbsp,SpeciesCode==ss)
+			m1<-tdf$MobileNetv2;m2<-tdf$ResNet101v2;m3<-tdf$ResNet50v2
+			m1<-ifelse(is.na(m1),0,m1);m2<-ifelse(is.na(m2),0,m2);m3<-ifelse(is.na(m3),0,m3)
+			if(m1>=m2 && m1>=m3){
+				pdbs<-subset(mdlcorrdf,Model=="MobileNet::sigmoid" & SpeciesCode==ss)
+				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
+				rdf<-data.frame(SpeciesCode=ss,ModelName="MobileNetv2",Fbeta=m1,Threshold=hurdval)
+			}else if(m2>m1 && m2>=m3){
+				pdbs<-subset(mdlcorrdf,Model=="Resnet101::sigmoid" & SpeciesCode==ss)
+				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
+				rdf<-data.frame(SpeciesCode=ss,ModelName="ResNet101v2",Fbeta=m2,Threshold=hurdval)
+			}else{
+				pdbs<-subset(mdlcorrdf,Model=="Resnet50::sigmoid" & SpeciesCode==ss)
+				hurdval<-subset(pdbs,Fbeta==max(pdbs$Fbeta,na.rm=T))$hurdle
+				rdf<-data.frame(SpeciesCode=ss,ModelName="ResNet50v2",Fbeta=m3,Threshold=hurdval)
+			}
+			if(nrow(rdf)>1){rdf<-subset(rdf,Threshold==max(rdf$Threshold))}
+			return(rdf)
+		},uwFbsp=uwFbsp,plotdataBySpecies=plotdataBySpecies)
+
+bySpeciesUMxFbsp<-ldply(umxFbsp$SpeciesCode,function(ss,umxFbsp,mdldf){
+			tmxfb<-subset(umxFbsp,SpeciesCode==ss)
+			mdlmxfb<-ifelse(tmxfb$ModelName=="MobileNetv2","MobileNet::sigmoid",ifelse(tmxfb$ModelName=="ResNet50v2","Resnet50::sigmoid","Resnet101::sigmoid"))
+			hrdmxfb<-tmxfb$Threshold
+			fbetamx<-tmxfb$Fbeta
+			sppmxfb<-subset(mdldf,SpeciesCode==ss & Model==mdlmxfb & hurdle==hrdmxfb)
+			ucspmxfb<-subset(sppmxfb,Treatment=="Uncorrected")
+			crspmxfb<-subset(sppmxfb,Treatment=="Corrected")
+			bspmxfb<-data.frame(SpeciesCode=ss,maxFbeta=fbetamx,Threshold=hrdmxfb,Model=tmxfb$ModelName,corrPrecision=crspmxfb$Prec,corrRecall=crspmxfb$Sens,uncorrPrecision=ucspmxfb$Prec,uncorRecall=ucspmxfb$Sens)
+			return(bspmxfb)
+		},umxFbsp=umxFbsp,mdldf=mdldf)
+########################
 
 for(ss in mxFbsp$SpeciesCode){ ## For the appendix!
 	spMxFb<-subset(mdlcorrdf,SpeciesCode==ss)
@@ -165,21 +227,18 @@ dev.new();print(pF)
 ggsave("C:/Users/salasle/git/Soundscapes2Landscapes/CNN_Bird_Species/three_species_optimal_threshold.png", width = 7, height = 5, units = "in", dpi=600)
 
 
-###########################
+################################################################
+## FIGURE 7
 ## Optimal threshold dot-plot by species, 3 models
 mFbsp$ModelName<-ifelse(mFbsp$Model=="MobileNet::sigmoid","MobileNetv2",ifelse(mFbsp$Model=="Resnet101::sigmoid","ResNet101v2","ResNet50v2"))
 mdpdf<-subset(mFbsp,SpeciesCode!="SOSP")
 
-################################################################
-## Use this if only including the species with enough GV data ##
-################################################################
 ## Excluding SOSP because of poor performance   "SOSP",
 gvspp<-c("ACWO","AMCR","AMRO","BEWR","BGGN","BHGR","BTYW","CALT","CAQU","CASJ","CAVI","CBCH","CORA","COYE","DEJU","EUCD","HOFI","MAWR","MODO","OATI","OCWA",
 	 "PAWR","PSFL","RWBL","SAVS","SPTO","STJA","WAVI","WBNU","WCSP","WEME","WETA","WITU","WIWA","WREN")
 mdpdf<-subset(mdpdf,SpeciesCode %in% gvspp)
-################################################################
 
-## All species corrected regardless of GV evaluation = 46
+#### All species corrected regardless of GV evaluation = 46
 ## With the above filter - all species with enough GV data to evaluate = 35
 
 mdp<-ggplot(mdpdf,aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName),size=3) + coord_flip() +
@@ -190,9 +249,30 @@ dev.new();print(mdp)
 
 ggsave("C:/Users/salasle/git/Soundscapes2Landscapes/CNN_Bird_Species/species_optimal_threshold.png", width = 7, height = 7, units = "in", dpi=600)
 
+######################################
+##### Table 2
+bySpeciesMxFbsp<-subset(bySpeciesMxFbsp,SpeciesCode %in% gvspp)
+bySpeciesUMxFbsp<-subset(bySpeciesUMxFbsp,SpeciesCode %in% gvspp)
+
+tbl2<-as.data.frame(bySpeciesMxFbsp %>% group_by(Model) %>% dplyr::summarize(maxFbeta=mean(maxFbeta),Precision=mean(corrPrecision),Recall=mean(corrRecall)))
+tbl2$maxFbeta<-round(tbl2$maxFbeta,2);tbl2$Precision<-round(tbl2$Precision*100,1);tbl2$Recall<-round(tbl2$Recall*100,1)
+tbl2all<-data.frame(Model="All",maxFbeta=round(mean(bySpeciesMxFbsp$maxFbeta),2),Precision=round(mean(bySpeciesMxFbsp$corrPrecision)*100,1),Recall=round(mean(bySpeciesMxFbsp$corrRecall)*100,1))
+tbl2<-rbind(tbl2,tbl2all)
+tbl2unc<-as.data.frame(bySpeciesUMxFbsp %>% group_by(Model) %>% dplyr::summarize(maxFbeta=mean(maxFbeta),Precision=mean(uncorrPrecision),Recall=mean(uncorRecall)))
+tbl2unc$maxFbeta<-round(tbl2unc$maxFbeta,2);tbl2unc$Precision<-round(tbl2unc$Precision*100,1);tbl2unc$Recall<-round(tbl2unc$Recall*100,1)
+tbl2uncAll<-data.frame(Model="All",maxFbeta=round(mean(bySpeciesUMxFbsp$maxFbeta),2),Precision=round(mean(bySpeciesUMxFbsp$uncorrPrecision)*100,1),Recall=round(mean(bySpeciesUMxFbsp$uncorRecall)*100,1))
+tbl2unc<-rbind(tbl2unc,tbl2uncAll)
+
+################################
+
+
+
+#################################################################################
+## Anything below goes to Supplemental Materials
+
 ###########################
 ## Table of performance metrics
-load(file=paste0(pathToLocalGit,"GVanalyses/3models2outputs/data/noPretrainGVPerformance_06072021.RData"))
+load(file=paste0(pathToLocalGit,"data/noPretrainGVPerformance_06072021.RData"))
 noPretrainGV<-summarizeByHurdle(allmatches=gvmatches,bySpecies="no",summarizeToSample=summarizeToSample,summarizeToEvent,sumLevel="clip",beta=0.5)
 noPretrainGV$ModelType<-"Not Pre-trained"
 noPretrainGV$Treatment<-"Uncorrected"
@@ -413,16 +493,14 @@ dev.new(); print(spdiffplot)
 # Once we correct every prediction we'll be able to compare.
 
 ###########################
+## FIGURE 3
 ## Precision-recall plot of test ROIs, all species combined
-## Modified from plotPRcurves_V2.R
 
 ## Performance data...
-load(file="c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/performanceData.RData")
+load(file="c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/performanceData.RData")
 
 ## Logistic correction data
-load(file="c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/logisticCorrectionData.RData")
-
-## pretrainedCorrGV and pretrainedUncorrGV are kissing: Model (Species specific), morder (5), Source (=treatment), F10 and F05
+load(file="c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/logisticCorrectionData.RData")
 pretrainedCorrGV$Model<-"Species specific"; pretrainedCorrGV$morder<-5;pretrainedCorrGV$Source<-"Corrected golden validations"
 pretrainedUncorrGV$Model<-"Species specific"; pretrainedUncorrGV$morder<-5;pretrainedUncorrGV$Source<-"Uncorrected golden validations"
 
@@ -461,18 +539,6 @@ pretrainedUncorrGV<-pretrainedUncorrGV[,names(alldata)]
 plotdata<-rbind(alldata,pretrainedCorrGV);plotdata<-rbind(plotdata,pretrainedUncorrGV)
 plotdata$Model<-as.character(plotdata$Model)
 plotdata$Model<-gsub("::sigmoid","",plotdata$Model)
-# 
-# p1<-ggplot(plotdata,aes(x=Threshold, y=Prec)) + facet_wrap(~Model,ncol=3) + 
-#   scale_color_gradient2(low = "black", mid="blue", high = "red") + 
-#   geom_point(aes(color=Miss,shape=Source),size=2) +
-#   scale_fill_brewer() + labs(x="Threshold", y="Precision",color="Miss rate",size="Test source") +
-#   theme_bw()
-# p2<-ggplot(plotdata,aes(x=Sens, y=Prec)) + facet_wrap(~Model,ncol=3) + 
-#   geom_line(aes(color=Source),size=2) + #Threshold,shape=
-#   scale_fill_brewer() + labs(x="Recall", y="Precision",color="Test source") + #"Threshold",shape=
-#   theme_bw()
-# print(p1)
-# dev.new();print(p2)
 
 ### We want to plot the pretrained corrected vs uncorrected separtely
 ## So...
@@ -482,36 +548,12 @@ morder<-data.frame(Model=unique(alldata$Model),modelOrder=c(3,2,1,4))
 alldata<-merge(alldata,morder, by="Model")
 alldata$Model<-reorder(alldata$Model,alldata$modelOrder)
 
-# p1aa<-ggplot(subset(alldata,Source!="Shree's ROIs"),aes(x=Threshold, y=Prec)) + facet_wrap(~Model,ncol=2) + 
-#   scale_color_gradient2(low = "black", mid="blue", high = "red") + 
-#   geom_point(aes(color=Miss,shape=Source),size=2) +
-#   scale_fill_brewer() + labs(x="Threshold", y="Precision",color="Miss rate",size="Test source") +
-#   theme_bw()
-# p2aa<-ggplot(subset(alldata,Source!="Shree's ROIs"),aes(x=Sens, y=Prec)) + facet_wrap(~Model,ncol=2) + 
-#   geom_line(aes(color=Source),size=2) + #Threshold,shape=
-#   scale_fill_brewer() + labs(x="Recall", y="Precision",color="Test source") + #"Threshold",shape=
-#   theme_bw()
-# print(p1aa)
-# dev.new();print(p2aa)
-
 logistdata<-rbind(pretrainedCorrGV,pretrainedUncorrGV)
-# p1b<-ggplot(logistdata,aes(x=Threshold, y=Prec)) + 
-#   scale_color_gradient2(low = "black", mid="blue", high = "red") + 
-#   geom_point(aes(color=Miss,shape=Source),size=2) +
-#   scale_fill_brewer() + labs(x="Threshold", y="Precision",color="Miss rate",size="Test source") +
-#   theme_bw()
-# p2b<-ggplot(logistdata,aes(x=Sens, y=Prec)) + 
-#   geom_line(aes(color=Source),size=2) + 
-#   scale_color_manual(values = c("#27408B", "#F29230")) +
-#   labs(x="Recall", y="Precision",color="Test source") + 
-#   theme_bw()
-# print(p1b)
-# dev.new();print(p2b)
 
-
-load("c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/roilabelmatch.RData")
-pathToLocalGit<-"c:/users/salasle/git/S2L_devel/"
-roidata<-read.csv("c:/users/salasle/git/S2L_devel/GVanalyses/3models2outputs/data/pattern_matching_ROIs_201109_testing.csv", stringsAsFactors=FALSE)
+## ROI performance data
+load("c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/roilabelmatch.RData")
+pathToLocalGit<-"c:/users/lsalas/git/S2L_devel/"
+roidata<-read.csv("c:/users/lsalas/git/S2L_devel/GVanalyses/3models2outputs/data/pattern_matching_ROIs_201109_testing.csv", stringsAsFactors=FALSE)
 roidata$roicenter<-roidata$x1+((roidata$x2-roidata$x1)/2)
 roidata$event<-sapply(roidata$filename,function(x){substr(x,1,32)})
 roidata<-roidata[,c("event","birdcode","site","device","year","month","hour","songtype","vote","type","method","roicenter","x1","x2")]
@@ -601,11 +643,6 @@ labelroisp<-subset(labelroisp,grepl("sigmoid",Model))
 labelroisp$Source<-"Test labeled data"
 labelroisp$Model<-gsub("::sigmoid","",labelroisp$Model)
 
-#check
-# p2<-ggplot(labelroisp,aes(x=Threshold, y=Prec)) + facet_wrap(~Model,ncol=3) + 
-#   geom_line(size=2,) +
-#   labs(x="Recall", y="Precision")
-
 ## Add it to alldata...
 newplotdata<-subset(alldata,Source %in% c("Golden validations","Shree's ROIs","Golden validations NPT"))
 newplotdata$Source<-ifelse(newplotdata$Source=="Shree's ROIs","Test labeled data NPT",newplotdata$Source)
@@ -638,6 +675,7 @@ ggsave("C:/Users/salasle/git/Soundscapes2Landscapes/CNN_Bird_Species/Pre-trainin
 
 
 ####################################
+## FIGURE 4
 # Precision vs. threshold - ROIs and soundscape
 ptdata = npdata %>% filter(Source == "Soundscape - XC Pre-training" | Source == "ROI - XC Pre-training")
 
