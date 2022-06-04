@@ -49,7 +49,7 @@ suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE))
 pathToLocalGit<-"c:/users/lsalas/git/Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/"  #Point to your local cloned repository
 
 ## Need the utility matching functions
-source(paste0(pathToLocalGit,"/scripts/scripts/predMatching_utils.R"))
+source(paste0(pathToLocalGit,"scripts/predMatching_utils.R"))
 
 # species in soundscape data to use in statistics (>=40 events for a species for calls used in training). Only 36 spp satisfy this requirement.
 gvspp<-c("ACWO","AMCR","AMRO","BEWR","BGGN","BHGR","BTYW","CALT","CAQU","CASJ","CAVI","CBCH","CORA","COYE","DEJU","EUCD","HOFI","MAWR","MODO","MOUQ","OATI","OCWA",
@@ -277,6 +277,16 @@ mdp1<-ggplot(mdpdf,aes(x=SpeciesCode,y=Fbeta)) + geom_point(aes(color=ModelName)
 dev.new();print(mdp1)
 
 #ggsave("C:/Users/lsalas/git/Soundscapes2Landscapes/CNN_Bird_Species/species_optimal_threshold.png", width = 7, height = 7, units = "in", dpi=600)
+
+## Find the threshold for the maxF05 for each species   $
+mdpdf$optimalthr<-sapply(1:nrow(mdpdf),function(ii,mdpdf,mdlcorrdf){
+					sppc<-mdpdf[ii,"SpeciesCode"]
+					mdln<-mdpdf[ii,"Model"]
+					betv<-mdpdf[ii,"Fbeta"]
+					thrv<-max(subset(mdlcorrdf,SpeciesCode==sppc & Model==mdln & Fbeta==betv)$hurdle)
+					return(thrv)
+				},mdpdf=mdpdf,mdlcorrdf=mdlcorrdf)
+#save(mdpdf,file="C:/Users/lsalas/git/Soundscapes2Landscapes/CNN_Bird_Species/species_optimal_threshold.RData")
 
 ##########################
 ## FIGURE 8
