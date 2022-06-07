@@ -20,23 +20,23 @@
 # 65% threshold for the covariate data of the logistic model, and a 50% penalization of the logistic prediction
 # Clearly, better results may be achieved by increasing either or both penalization thresholds, but this low-level 
 # penalization illustrates well the effect of our approach.
-# Source:
+# Source: the script fit_updateLogisticCorr_models.R
 
 # BirdNET_GV_matches_06102021.RData
 # This is the evaluation of the BirdNET predictions against the soundscape data.
-# Source:
+# Source: the script birdnet_GV_results.R
 
 # performanceData.RData
 # This file contains the evaluations of predictions from uncorrected data and performance from not-pretrained models for ROI data
-# Source:
+# Source: the script plotPrecisionRecall.R
 
 # logisticCorrectionData.RData
 # This file provides the evaluations of predictions from corrected data
-# Source:
+# Source: the script matchGVtoPreds_part4.R
 
 # roilabelmatch.RData
 # This file provides the evaluations of predictions for pre-trained models predicting on ROI data
-# Source:
+# Source: the script testVsLabels.R
 
 # pattern_matching_ROIs_201109_testing.csv
 # We use this to filter for only predictions near a known ROI tag
