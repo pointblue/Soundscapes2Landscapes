@@ -232,7 +232,7 @@ gvspmatches<-subset(gvspmatches,!is.na(PredictionsDatasetId))
 ## For each event need the collection of afids -> eventIddf
 gvevents<-unique(gvspmatches$SamplingEvent)
 tm<-Sys.time()
-con <- dbConnect(RMySQL::MySQL(), user = "leo", password = "Drs7Q59ZPfpcYzFW", host = "s2l-db-01.cuttlb1a3ul1.us-east-1.rds.amazonaws.com", port = 3306, dbname = "s2l_test")
+con <- dbConnect(RMySQL::MySQL(), user = "leo", password = "putPasswordHere", host = "s2l-db-01.cuttlb1a3ul1.us-east-1.rds.amazonaws.com", port = 3306, dbname = "s2l_test")
 eventIddf<-ldply(gvevents,function(ee,con){
 			site<-substr(ee,1,15)
 			yr<-substr(ee,19,20)
@@ -264,7 +264,7 @@ gvsph<-unique(gvspmatches[,c("SamplingEvent","Model","SpeciesCode","PredictionsD
 hurdval<-0.9*10^7
 sppdf<-data.frame(SpeciesCode=spmodel$SpeciesCode)
 tm<-Sys.time()
-con <- dbConnect(RMySQL::MySQL(), user = "leo", password = "Drs7Q59ZPfpcYzFW", host = "s2l-db-01.cuttlb1a3ul1.us-east-1.rds.amazonaws.com", port = 3306, dbname = "s2l_test")
+con <- dbConnect(RMySQL::MySQL(), user = "leo", password = "putPasswordHere", host = "s2l-db-01.cuttlb1a3ul1.us-east-1.rds.amazonaws.com", port = 3306, dbname = "s2l_test")
 gvcovardf<-ldply(1:nrow(gvsph),function(dd,gvsph,con,sppdf,hurdval,eventIddf){
 			sev<-as.character(gvsph[dd,"SamplingEvent"])
 			afv<-as.character(gvsph[dd,"AudiofileId"])
