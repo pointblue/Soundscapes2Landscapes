@@ -597,7 +597,7 @@ summarizeToSample<-function(matches,beta){
 				f1val<-ifelse(sens+prec==0,0,(2*sens*prec)/(sens+prec))
 				miss<-ifelse(trval+fnval==0,0,fnval/(trval+fnval))
 				fpper<-ifelse(trval+fpval==0,0,fpval/(trval+fpval))
-				fbeta<-(1+(beta^2))*((prec*sens)/(((beta^2)*prec) + sens))
+				fbeta<-ifelse(sens==0,0,(1+(beta^2))*((prec*sens)/(((beta^2)*prec) + sens)))
 				modeldf<-data.frame(count=nrow(mdf),truePos=trval,falseNeg=fnval,falsePos=fpval,
 						F1val=f1val,Sens=sens,Prec=prec,Miss=miss,FPper=fpper,Fbeta=fbeta,beta=beta)
 				modeldf$ModelName<-mm
