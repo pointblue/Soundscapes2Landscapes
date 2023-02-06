@@ -9,6 +9,7 @@
 # matthew.clark@sonoma.edu
 
 # Dr. Leo Salas
+# EcoInformatics and Climate Solutions
 # Point Blue Conservation Science
 # lsalas@pointblue.org
 
@@ -27,6 +28,28 @@ source(paste0(pathToLocalGit,"scripts/dataFunctions.R"))
 ##############################################################################################################################
 #load the matches
 load(file=paste0(pathToLocalGit,"data/ROI_GV_allmatches_011523.RData"))  #ROI_GV_allmatches_011323.RData contains the nongeoBN and includes non-target species. Do not use.
+
+#Need the following data to attribute the roiTest data...
+afiles<-read.csv(paste0(pathToLocalGit,"data/audiofiles_20221216.csv"),stringsAsFactors=F)
+afiles<-afiles[,-1]
+afiles$chrdt<-as.character(as.POSIXct(paste0("20",afiles$Year,"-",afiles$Month,"-",afiles$Day," ",afiles$Hour,":",afiles$Minute),format="%Y-%m-%d %H:%M"))
+afiles$SamplingEvent<-paste0(afiles$SiteName,"_",afiles$chrdt)
+afiles$SamplingEvent<-substr(afiles$SamplingEvent,1,32)
+afiles$SamplingEvent<-gsub(" ","_",afiles$SamplingEvent)
+afiles$SamplingEvent<-gsub(":","-",afiles$SamplingEvent)
+afiles<-afiles[,c("AudiofileId","SiteName","Year","Month","Day","Hour","Minute","SamplingEvent")]
+
+# roiTestdf is needed to find optimal thresholds
+roiTestdf<-read.csv(paste0(pathToLocalGit,"data/pattern_matching_ROIs_201109_testing.csv"), stringsAsFactors=FALSE)
+roiTestdf$SamplingEvent<-substr(roiTestdf$filename,1,32)
+roiTestdf<-merge(roiTestdf,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
+roiTestdf<-subset(roiTestdf,!is.na(AudiofileId))
+# Need the absent data for porper model evaluation to find FP
+roiAbs_nptdf<-read.csv(paste0(pathToLocalGit,"data/pattern_matching_ROIs_230109_absent_testing.csv"), stringsAsFactors=FALSE)
+roiAbs_nptdf$SamplingEvent<-substr(roiAbs_nptdf$filename,1,32)
+roiAbs_nptdf<-merge(roiAbs_nptdf,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
+roiAbs_nptdf<-subset(roiAbs_nptdf,!is.na(AudiofileId))
+roiTestdf<-rbind(roiTestdf,roiAbs_nptdf)
 
 # Then summarize and calculate indices by hurdle value
 sumGV_NPTdf<-summarizeByHurdle(allmatches=nptGVmatches,bySpecies="no",summarizeToSample,summarizeToEvent,sumLevel="clip",beta=0.5,addEvent=FALSE)

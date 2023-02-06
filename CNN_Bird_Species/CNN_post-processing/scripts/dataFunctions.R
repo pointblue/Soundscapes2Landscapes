@@ -4,6 +4,7 @@
 
 # AUTHOR:
 # Dr. Leo Salas
+# EcoInformatics and Climate Solution
 # Point Blue Conservation Science
 # lsalas@pointblue.org
 
@@ -28,50 +29,56 @@ pathToLocalGit<-"G:/Shared drives/NASA  S2L/Paper Development/CNN bird species/r
 ## We've left some code un-remarked because we need it for the result graphs and tables
 
 ###########################
-# Load data
+# Here we provide the code and data resources to reproduce the input data file used for our results. Specifically...
+# The outputs of this code file (i.e., the output of every "save" statemebt below) are provided and used with the generatePlots.R code file, which reproduces all the graphics and tables in the paper.
+
+# We start with the AI models predictions, for the sake of completeness
+# However, the database of predictions and some of the code files to summarize the predictions are not included in this repository 
+# We mention  where each data file comes from, and if we do not provide the code file, we name it and can provide a copy upon request.
+
 # We need the original pretrained and not pretrained predictions from each model to test against the GV data 
-# The pre-trained predictions are in "//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/predictions_sigmoid_20221216.csv"
-# The not-XC-pretrained predictions are obtained with the code file noXCmodels_results.R
-# We need the ROI performance data, the latest ROI centers file (210510.csv)
-# We also need the BirdNet predictions - updated version below...
+# The pre-trained predictions are in "predictions_sigmoid_20221216.csv" - Please ask for a copy of this ~2Gb data file until we are ready to post a copy in an open repository 
+# The not-XC-pretrained predictions are obtained with the code file noXCmodels_results.R - we are happy to share a copy of this file upon request, along with the pickle files of predictions it uses
+# We need the ROI performance data, the latest ROI centers file
+# We also need the BirdNet predictions
 
 #############
-## Load the ROI data - need this first to filter the GV data by training call...
-#roidf<-read.csv(paste0(pathToLocalGit,"S2L_devel/GVanalyses/3models2outputs/data/pattern_matching_ROIs_centers_230109.csv"), stringsAsFactors=FALSE)
-#roidf$SamplingEvent<-substr(roidf$filename,1,32)
-#roidf<-roidf[,c("site","birdcode","songtype","vote","type","method","roicenterround","SamplingEvent")]
-#names(roidf)<-c("SiteName","SpeciesCode","songtype","vote","type","method","second","SamplingEvent")
-## For now assuming we used all presents, since this is a test of accuracy
-#roidf<-subset(roidf,vote=="present")
+# Load the ROI data - need this first to filter the GV data by training call...
+roidf<-read.csv(paste0(pathToLocalGit,"S2L_devel/GVanalyses/3models2outputs/data/pattern_matching_ROIs_centers_230109.csv"), stringsAsFactors=FALSE)
+roidf$SamplingEvent<-substr(roidf$filename,1,32)
+roidf<-roidf[,c("site","birdcode","songtype","vote","type","method","roicenterround","SamplingEvent")]
+names(roidf)<-c("SiteName","SpeciesCode","songtype","vote","type","method","second","SamplingEvent")
+# For now assuming we used all presents, since this is a test of accuracy
+roidf<-subset(roidf,vote=="present")
 
 #############
-## Prepare the GV data
-#load(paste0(pathToLocalGit,"S2L_devel/GVanalyses/data/gvData.RData"))
-## First, for testing BirdNET, keep an unfiltered copy
-#gvedf_bn<-gvedf
-## Then filter correctly, knowing which call is the correct for each species...
-#gvedf<-subset(gvedf,!is.na(call)) 
-#gvedf$spcall<-paste0(toupper(gvedf$species),"::",toupper(gvedf$call))
-## Now we need the species and calls selected for training:
-#roicalls<-unique(roidf[,c("SpeciesCode","songtype")])
-#roicalls$spcall<-paste0(toupper(roicalls$SpeciesCode),"::",toupper(roicalls$songtype))
-#gvedf<-subset(gvedf,spcall %in% roicalls$spcall)
-## Add SamplingEvent to gvedf
-#gvedf$SamplingEvent<-substr(gvedf$RegistryName,1,32)
-#gvedf_bn$SamplingEvent<-substr(gvedf_bn$RegistryName,1,32)
+# Prepare the GV data
+load(paste0(pathToLocalGit,"S2L_devel/GVanalyses/data/gvData.RData"))
+# First, for testing BirdNET, keep an unfiltered copy
+gvedf_bn<-gvedf
+# Then filter correctly, knowing which call is the correct for each species...
+gvedf<-subset(gvedf,!is.na(call)) 
+gvedf$spcall<-paste0(toupper(gvedf$species),"::",toupper(gvedf$call))
+# Now we need the species and calls selected for training:
+roicalls<-unique(roidf[,c("SpeciesCode","songtype")])
+roicalls$spcall<-paste0(toupper(roicalls$SpeciesCode),"::",toupper(roicalls$songtype))
+gvedf<-subset(gvedf,spcall %in% roicalls$spcall)
+# Add SamplingEvent to gvedf
+gvedf$SamplingEvent<-substr(gvedf$RegistryName,1,32)
+gvedf_bn$SamplingEvent<-substr(gvedf_bn$RegistryName,1,32)
 
 # Then get the species with 40 or more GV records
-#gvsp<-ldply(unique(gvedf$species),function(ss,gvedf){
-#			spc<-nrow(subset(gvedf,species==ss))
-#			tdf<-data.frame(species=ss,GVcount=spc)
-#			return(tdf)
-#		},gvedf=gvedf)
-#gvsp<-subset(gvsp, GVcount>=40)
+gvsp<-ldply(unique(gvedf$species),function(ss,gvedf){
+			spc<-nrow(subset(gvedf,species==ss))
+			tdf<-data.frame(species=ss,GVcount=spc)
+			return(tdf)
+		},gvedf=gvedf)
+gvsp<-subset(gvsp, GVcount>=40)
 # finally subset the GV data for the 37 testable species
-#gvedf<-subset(gvedf, species %in% gvsp$species)
-#gvedf_bn<-subset(gvedf_bn, species %in% gvsp$species)
+gvedf<-subset(gvedf, species %in% gvsp$species)
+gvedf_bn<-subset(gvedf_bn, species %in% gvsp$species)
 
-## need the AudiofileId data - DO NOT remark out - these data are needed below to attribute roiTestdf
+## need the AudiofileId data
 afiles<-read.csv(paste0(pathToLocalGit,"data/audiofiles_20221216.csv"),stringsAsFactors=F)
 afiles<-afiles[,-1]
 afiles$chrdt<-as.character(as.POSIXct(paste0("20",afiles$Year,"-",afiles$Month,"-",afiles$Day," ",afiles$Hour,":",afiles$Minute),format="%Y-%m-%d %H:%M"))
@@ -82,12 +89,12 @@ afiles$SamplingEvent<-gsub(":","-",afiles$SamplingEvent)
 afiles<-afiles[,c("AudiofileId","SiteName","Year","Month","Day","Hour","Minute","SamplingEvent")]
 #
 ## adding AudiofileId to both the GV and ROI datasets
-#gvedf<-merge(gvedf,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
-#gvedf<-subset(gvedf,!is.na(AudiofileId))
-#gvedf_bn<-merge(gvedf_bn,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
-#gvedf_bn<-subset(gvedf_bn,!is.na(AudiofileId))
+gvedf<-merge(gvedf,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
+gvedf<-subset(gvedf,!is.na(AudiofileId))
+gvedf_bn<-merge(gvedf_bn,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
+gvedf_bn<-subset(gvedf_bn,!is.na(AudiofileId))
 
-# DO NOT remark out this part either - roiTestdf is needed to find optimal thresholds, line 932...
+# roiTestdf is needed to find optimal thresholds
 roiTestdf<-read.csv(paste0(pathToLocalGit,"data/pattern_matching_ROIs_201109_testing.csv"), stringsAsFactors=FALSE)
 roiTestdf$SamplingEvent<-substr(roiTestdf$filename,1,32)
 roiTestdf<-merge(roiTestdf,afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=T)
@@ -100,127 +107,125 @@ roiAbs_nptdf<-subset(roiAbs_nptdf,!is.na(AudiofileId))
 roiTestdf<-rbind(roiTestdf,roiAbs_nptdf)
 
 ################
-## Preparing the pre-trained model predictions
-## Run this once
-#
-#roiAF<-unique(roiTestdf$AudiofileId)
-#gveAF<-unique(gvedf$AudiofileId)
-#
-#preds<-read.csv("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/predictions_sigmoid_20221216.csv",stringsAsFactors=F)
-#preds<-merge(preds,afiles[,c("AudiofileId","SamplingEvent")],by="AudiofileId",all.x=T)
-#preds<-preds[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","SamplingEvent")]
-##We subset for the ROI and GV events, and the proper AudiofileId
-#
-#predROI_PTdf<-subset(preds,AudiofileId %in% roiAF)
-#predROI_PTdf$ModelName<-ifelse(predROI_PTdf$PredictionsDatasetId %in% c(2,7),"ResNet50v2",
-#		ifelse(predROI_PTdf$PredictionsDatasetId %in% c(4,8),"ResNet101v2","MobileNetv2"))
-#
-#predGV_PTdf<-subset(preds,AudiofileId %in% gveAF)
-#predGV_PTdf$ModelName<-ifelse(predGV_PTdf$PredictionsDatasetId %in% c(2,7),"ResNet50v2",
-#		ifelse(predGV_PTdf$PredictionsDatasetId %in% c(4,8),"ResNet101v2","MobileNetv2"))
-#
-#save(predROI_PTdf,predGV_PTdf,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/pretrained_ROI_GV_predictions_20221225.RData")
+# Preparing the pre-trained model predictions
+# Run this once
 
-## Preparing the not-pretrained model predictions
-## Run this once
-#
-#speciesdf<-data.frame(SpeciesNum=1:54,SpeciesCode=c('STJA', 'EUCD', 'ACWO', 'GHOW', 'BRCR', 'COYE', 'BTPI', 'OSFL', 'AMCR', 'WBNU', 'HETH', 'CASJ', 'WITU', 'PIWO', 'LAZB', 'CAVI', 
-#				'BUOR', 'CALT', 'WETA', 'WEME', 'PAWR', 'RWBL', 'BHGR', 'HUVI', 'ATFL', 'MODO', 'WREN', 'NOFL', 'MOUQ', 'OCWA', 'SOSP', 'OATI', 'NUWO', 'PSFL', 'WCSP', 'WIWA', 'HOWR', 
-#				'CBCH', 'CAQU', 'DEJU', 'CORA', 'BEWR', 'GRSP', 'HOFI', 'RSHA', 'ANHU', 'BGGN', 'BTYW', 'SWTH', 'MAWR', 'WAVI', 'SPTO', 'AMRO', 'SAVS'))
-#
+roiAF<-unique(roiTestdf$AudiofileId)
+gveAF<-unique(gvedf$AudiofileId)
 
-#load(paste0(pathToLocalGit,"S2L_devel/GVanalyses/3models2outputs/data/untrainedPredictions_gv_roi.RData"))
-##predGV_NPTdf<-rbindlist(gvdflist)
-##predGV_NPTdf<-merge(predGV_NPTdf,speciesdf,by="SpeciesNum")
-#predGV_NPTdf$PredictionId<-c(1:nrow(predGV_NPTdf)) #A fake predictionID because these records were never databased
-#predGV_NPTdf$SamplingEvent<-substr(predGV_NPTdf$RegistryName,1,32)
-#predGV_NPTdf$ModelName<-ifelse(grepl("ResNet50",predGV_NPTdf$PredictionsDatasetId),"ResNet50v2",
-#		ifelse(grepl("ResNet101",predGV_NPTdf$PredictionsDatasetId),"ResNet101v2","MobileNetv2"))
-#predGV_NPTdf<-merge(predGV_NPTdf[,c("PredictionId","PredictionsDatasetId","Second","Score","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
-#names(predGV_NPTdf)<-gsub("Score","PredictionScore",names(predGV_NPTdf))
-#predGV_NPTdf<-predGV_NPTdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
-#
-#predROI_NPTdf<-rbindlist(roidflist)
-#predROI_NPTdf<-merge(predROI_NPTdf,speciesdf,by="SpeciesNum")
-#predROI_NPTdf$PredictionId<-c(1:nrow(predROI_NPTdf)) #A fake predictionID because these records were never databased
-#predROI_NPTdf$SamplingEvent<-substr(predROI_NPTdf$RegistryName,1,32)
-#predROI_NPTdf$ModelName<-ifelse(grepl("ResNet50",predROI_NPTdf$PredictionsDatasetId),"ResNet50v2",
-#		ifelse(grepl("ResNet101",predROI_NPTdf$PredictionsDatasetId),"ResNet101v2","MobileNetv2"))
-#predROI_NPTdf<-merge(predROI_NPTdf[,c("PredictionId","PredictionsDatasetId","Second","Score","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
-#names(predROI_NPTdf)<-gsub("Score","PredictionScore",names(predROI_NPTdf))
-#predROI_NPTdf<-predROI_NPTdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
-#predROI_NPTdf<-subset(predROI_NPTdf,AudiofileId %in% roiAF)
-#
-#save(predROI_NPTdf,predGV_NPTdf,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/non_pretrained_ROI_GV_predictions_20221225.RData")
+preds<-read.csv("//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/predictions_sigmoid_20221216.csv",stringsAsFactors=F)
+preds<-merge(preds,afiles[,c("AudiofileId","SamplingEvent")],by="AudiofileId",all.x=T)
+preds<-preds[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","SamplingEvent")]
+# We subset for the ROI and GV events, and the proper AudiofileId
+
+predROI_PTdf<-subset(preds,AudiofileId %in% roiAF)
+predROI_PTdf$ModelName<-ifelse(predROI_PTdf$PredictionsDatasetId %in% c(2,7),"ResNet50v2",
+		ifelse(predROI_PTdf$PredictionsDatasetId %in% c(4,8),"ResNet101v2","MobileNetv2"))
+
+predGV_PTdf<-subset(preds,AudiofileId %in% gveAF)
+predGV_PTdf$ModelName<-ifelse(predGV_PTdf$PredictionsDatasetId %in% c(2,7),"ResNet50v2",
+		ifelse(predGV_PTdf$PredictionsDatasetId %in% c(4,8),"ResNet101v2","MobileNetv2"))
+
+save(predROI_PTdf,predGV_PTdf,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/pretrained_ROI_GV_predictions_20221225.RData") 
+
+# Preparing the not-pretrained model predictions
+# Run this once
+
+speciesdf<-data.frame(SpeciesNum=1:54,SpeciesCode=c('STJA', 'EUCD', 'ACWO', 'GHOW', 'BRCR', 'COYE', 'BTPI', 'OSFL', 'AMCR', 'WBNU', 'HETH', 'CASJ', 'WITU', 'PIWO', 'LAZB', 'CAVI', 
+				'BUOR', 'CALT', 'WETA', 'WEME', 'PAWR', 'RWBL', 'BHGR', 'HUVI', 'ATFL', 'MODO', 'WREN', 'NOFL', 'MOUQ', 'OCWA', 'SOSP', 'OATI', 'NUWO', 'PSFL', 'WCSP', 'WIWA', 'HOWR', 
+				'CBCH', 'CAQU', 'DEJU', 'CORA', 'BEWR', 'GRSP', 'HOFI', 'RSHA', 'ANHU', 'BGGN', 'BTYW', 'SWTH', 'MAWR', 'WAVI', 'SPTO', 'AMRO', 'SAVS'))
+
+
+load(paste0(pathToLocalGit,"S2L_devel/GVanalyses/3models2outputs/data/untrainedPredictions_gv_roi.RData"))
+predGV_NPTdf<-rbindlist(gvdflist)
+predGV_NPTdf<-merge(predGV_NPTdf,speciesdf,by="SpeciesNum")
+predGV_NPTdf$PredictionId<-c(1:nrow(predGV_NPTdf)) #A fake predictionID because these records were never databased
+predGV_NPTdf$SamplingEvent<-substr(predGV_NPTdf$RegistryName,1,32)
+predGV_NPTdf$ModelName<-ifelse(grepl("ResNet50",predGV_NPTdf$PredictionsDatasetId),"ResNet50v2",
+		ifelse(grepl("ResNet101",predGV_NPTdf$PredictionsDatasetId),"ResNet101v2","MobileNetv2"))
+predGV_NPTdf<-merge(predGV_NPTdf[,c("PredictionId","PredictionsDatasetId","Second","Score","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
+names(predGV_NPTdf)<-gsub("Score","PredictionScore",names(predGV_NPTdf))
+predGV_NPTdf<-predGV_NPTdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
+
+predROI_NPTdf<-rbindlist(roidflist)
+predROI_NPTdf<-merge(predROI_NPTdf,speciesdf,by="SpeciesNum")
+predROI_NPTdf$PredictionId<-c(1:nrow(predROI_NPTdf)) #A fake predictionID because these records were never databased
+predROI_NPTdf$SamplingEvent<-substr(predROI_NPTdf$RegistryName,1,32)
+predROI_NPTdf$ModelName<-ifelse(grepl("ResNet50",predROI_NPTdf$PredictionsDatasetId),"ResNet50v2",
+		ifelse(grepl("ResNet101",predROI_NPTdf$PredictionsDatasetId),"ResNet101v2","MobileNetv2"))
+predROI_NPTdf<-merge(predROI_NPTdf[,c("PredictionId","PredictionsDatasetId","Second","Score","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
+names(predROI_NPTdf)<-gsub("Score","PredictionScore",names(predROI_NPTdf))
+predROI_NPTdf<-predROI_NPTdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
+predROI_NPTdf<-subset(predROI_NPTdf,AudiofileId %in% roiAF)
+
+save(predROI_NPTdf,predGV_NPTdf,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/non_pretrained_ROI_GV_predictions_20221225.RData")
 ################
 
-## Load the pretrained model predictions...
-#load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/pretrained_ROI_GV_predictions_20221225.RData")
-## Load the non-pretrained model predictions...
-#load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/non_pretrained_ROI_GV_predictions_20221225.RData")
+# Load the pretrained model predictions...
+load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/pretrained_ROI_GV_predictions_20221225.RData")
+# Load the non-pretrained model predictions...
+load(file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/non_pretrained_ROI_GV_predictions_20221225.RData")
 
-## Load the BirdNET data
-#bndf<-read.csv(paste0(pathToLocalGit,"Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/data/gv_birdnet_analyzer_audacity_2sec_overlap_geographic.csv"), stringsAsFactors=FALSE)
-#bndf<-subset(bndf,!is.na(birdcode))
-#bndf$SamplingEvent<-substr(bndf$File,1,32)
-## BirdNET is trained on 3-second clips, we use 2 seconds. So, we expand the BirdNET predictions into two 2-second segments.
-## For example, if BirdNET reports a detection for species X in the time interval starting on second 20 and ending on second 23, we will split the prediction into two: centered at second 21 and at second 22.
-#bngvdf<-ldply(1:nrow(bndf),function(rr,bndf){
-#			rdf<-bndf[rr,]
-#			ssec<-rdf$StartSecond
-#			if(ssec<58){
-#				rdf<-rbind(rdf,rdf)
-#				rdf$Second<-c(ssec+1,ssec+2)
-#			}else{
-#				rdf$Second<-ssec+1
-#			}
-#			return(rdf)
-#		}, bndf=bndf)
-#names(bngvdf)<-gsub("birdcode","SpeciesCode",names(bngvdf))
-#bngvdf$PredictionScore<-bngvdf$Probability*10^7
-#bngvdf$ModelName<-"BirdNET"
-#bngvdf$PredictionsDatasetId<-10
-#bngvdf$PredictionId<-c(1:nrow(bngvdf))
-#bngvdf<-merge(bngvdf[,c("PredictionId","PredictionsDatasetId","Second","PredictionScore","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
-#bngvdf<-bngvdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
+# Load the BirdNET data
+bndf<-read.csv(paste0(pathToLocalGit,"Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/data/gv_birdnet_analyzer_audacity_2sec_overlap_geographic.csv"), stringsAsFactors=FALSE)
+bndf<-subset(bndf,!is.na(birdcode))
+bndf$SamplingEvent<-substr(bndf$File,1,32)
+# BirdNET is trained on 3-second clips, we use 2 seconds. So, we expand the BirdNET predictions into two 2-second segments.
+# For example, if BirdNET reports a detection for species X in the time interval starting on second 20 and ending on second 23, we will split the prediction into two: centered at second 21 and at second 22.
+bngvdf<-ldply(1:nrow(bndf),function(rr,bndf){
+			rdf<-bndf[rr,]
+			ssec<-rdf$StartSecond
+			if(ssec<58){
+				rdf<-rbind(rdf,rdf)
+				rdf$Second<-c(ssec+1,ssec+2)
+			}else{
+				rdf$Second<-ssec+1
+			}
+			return(rdf)
+		}, bndf=bndf)
+names(bngvdf)<-gsub("birdcode","SpeciesCode",names(bngvdf))
+bngvdf$PredictionScore<-bngvdf$Probability*10^7
+bngvdf$ModelName<-"BirdNET"
+bngvdf$PredictionsDatasetId<-10
+bngvdf$PredictionId<-c(1:nrow(bngvdf))
+bngvdf<-merge(bngvdf[,c("PredictionId","PredictionsDatasetId","Second","PredictionScore","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
+bngvdf<-bngvdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
 
-## Adding the non-geographic filtered data for BirdNET
-#ngbndf<-read.csv(paste0(pathToLocalGit,"Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/data/gv_birdnet_analyzer_audacity_2sec_overlap_no_geographic.csv"), stringsAsFactors=FALSE)
-#ngbndf$birdcode<-ifelse(is.na(ngbndf$birdcode),"XXSP",ngbndf$birdcode)
-#ngbndf$SamplingEvent<-substr(ngbndf$File,1,32)
-## BirdNET is trained on 3-second clips, we use 2 seconds. So, we expand the BirdNET predictions into two 2-second segments.
-## For example, if BirdNET reports a detection for species X in the time interval starting on second 20 and ending on second 23, we will split the prediction into two: centered at second 21 and at second 22.
-#ngbngvdf<-ldply(1:nrow(ngbndf),function(rr,ngbndf){
-#			rdf<-ngbndf[rr,]
-#			ssec<-rdf$StartSecond
-#			if(ssec<58){
-#				rdf<-rbind(rdf,rdf)
-#				rdf$Second<-c(ssec+1,ssec+2)
-#			}else{
-#				rdf$Second<-ssec+1
-#			}
-#			return(rdf)
-#		}, ngbndf=ngbndf)
-#names(ngbngvdf)<-gsub("birdcode","SpeciesCode",names(ngbngvdf))
-#ngbngvdf$PredictionScore<-ngbngvdf$Probability*10^7
-#ngbngvdf$ModelName<-"BirdNET"
-#ngbngvdf$PredictionsDatasetId<-10
-#ngbngvdf$PredictionId<-c(1:nrow(ngbngvdf))
-#ngbngvdf<-merge(ngbngvdf[,c("PredictionId","PredictionsDatasetId","Second","PredictionScore","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
-#ngbngvdf<-ngbngvdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
+# Adding the non-geographic filtered data for BirdNET
+ngbndf<-read.csv(paste0(pathToLocalGit,"Soundscapes2Landscapes/CNN_Bird_Species/CNN_post-processing/data/gv_birdnet_analyzer_audacity_2sec_overlap_no_geographic.csv"), stringsAsFactors=FALSE)
+ngbndf$birdcode<-ifelse(is.na(ngbndf$birdcode),"XXSP",ngbndf$birdcode)
+ngbndf$SamplingEvent<-substr(ngbndf$File,1,32)
+ngbngvdf<-ldply(1:nrow(ngbndf),function(rr,ngbndf){
+			rdf<-ngbndf[rr,]
+			ssec<-rdf$StartSecond
+			if(ssec<58){
+				rdf<-rbind(rdf,rdf)
+				rdf$Second<-c(ssec+1,ssec+2)
+			}else{
+				rdf$Second<-ssec+1
+			}
+			return(rdf)
+		}, ngbndf=ngbndf)
+names(ngbngvdf)<-gsub("birdcode","SpeciesCode",names(ngbngvdf))
+ngbngvdf$PredictionScore<-ngbngvdf$Probability*10^7
+ngbngvdf$ModelName<-"BirdNET"
+ngbngvdf$PredictionsDatasetId<-10
+ngbngvdf$PredictionId<-c(1:nrow(ngbngvdf))
+ngbngvdf<-merge(ngbngvdf[,c("PredictionId","PredictionsDatasetId","Second","PredictionScore","SpeciesCode","SamplingEvent","ModelName")],afiles[,c("SamplingEvent","AudiofileId")],by="SamplingEvent",all.x=TRUE)
+ngbngvdf<-ngbngvdf[,c("PredictionId","AudiofileId","PredictionsDatasetId","Second","SpeciesCode","PredictionScore","ModelName","SamplingEvent")]
 ####################
-## Now we need the matching functions for GV data...
+# Now we need the matching functions for GV data...
 
 #####
-## This function is a high-level cycling function seeking the matches for all hurdle levels for each model against the golden validations
+# This function is a high-level cycling function seeking the matches for all hurdle levels for each model against the golden validations
 # data is the predictions data.frame
 # gvedf is the data frame of GV data, from the script makeGVdf.R. Must have: species, secs, SamplingEvent 
 # hurdvals is the vactor of hurdles to be used to penalize the data
 # gvGetMatches is a function called within this function
 # removeDoubleGVMatches is a function called within this function
-## REQUIREMENTS: data must have fields PredictionId, ModelName, SpeciesCode, SamplingEvent, and Second
-## REQUIREMENTS: hurdle is a value between 0 and 1
-## REQUIREMENTS: gvedf must have fields species, secs, SamplingEvent
+# REQUIREMENTS: data must have fields PredictionId, ModelName, SpeciesCode, SamplingEvent, and Second
+# REQUIREMENTS: hurdle is a value between 0 and 1
+# REQUIREMENTS: gvedf must have fields species, secs, SamplingEvent
 getModelHurdledGVMatches<-function(data,gvedf,hurdvals,getGVMatches,removeDoubleGVMatches){
   
   library(doParallel)
@@ -362,38 +367,12 @@ getGVMatches<-function(rdf,gdf,removeDoubleGVMatches){	#Processing one recording
   eventdf<-subset(eventdf, (match %in% c("TRUEPOS","FALSENEG")) | (match=="FALSEPOS" & !PredictionId %in% eventTPR)) #i.e., get all tp and fn,and only those fp that are not a record in eventTPR
   
   ## We then add all predictions not in eventdf at all (by PredictionId) and make them FP
-  # ARE THESE the ones not overlapping with the GV records??
   drdf<-subset(rdf,!PredictionId %in% eventdf$PredictionId)
   if(nrow(drdf)>0){
     dmadf<-data.frame(PredictionId=drdf$PredictionId, SamplingEvent=drdf$SamplingEvent, Second=drdf$Second, GVsecond=rep(NA,nrow(drdf)), SpeciesCode=drdf$SpeciesCode, 
                       GVspeciesCode=rep(NA,nrow(drdf)), PredictionScore=drdf$PredictionScore, match=rep("FALSEPOS",nrow(drdf)), matchDelta=rep(9,nrow(drdf)))
     eventdf<-rbind(eventdf,dmadf)
   }
-  
-  ## Finally the TRUENEG...
-  # This matching happening here is already confined to a single sampling event. 
-  # The TN here are, for each species: 59 - nTP - nFP - nFN
-  
-  # IGNORE THIS FOR NOW
-  #tnspdf<-data.frame()
-  #for(spp in unique(gdf$species)){
-  #	tedf<-subset(eventdf,SpeciesCode==spp)
-  #	nTP<-sum(tedf$match=="TRUEPOS")
-  #	nFP<-sum(tedf$match=="FALSEPOS")
-  #	nFN<-sum(tedf$match=="FALSENEG")
-  #	ntnrec<-59-nTP-nFP-nFN
-  #	etndf<-data.frame(PredictionId=0, SamplingEvent=evt, Second=NA, GVsecond=NA, SpeciesCode=spp, 
-  #			GVspeciesCode=spp, PredictionScore=10000000, match="TRUENEG", matchDelta=4)
-  #	tnspdf<-rbind(tnspdf,etndf)
-  #}
-  #
-  #eventdf<-rbind(eventdf,tnspdf)
-  
-  
-  # It is also posible that the same TRUEPOS prediction is found in two consecutive GV records of the same species, so...  THIS IS OK1
-  #if(nrow(eventdf)>0){
-  #	eventdf<-removeDoubleGVMatches(edf=eventdf)
-  #}
   
   # Done
   return(eventdf)
@@ -731,30 +710,30 @@ summarizeToEvent<-function(matches,bySpecies,beta,addEvent){
 }
 
 ####################
-## For the pre-trained predictions vs GV
-#ptGVmatches<-getModelHurdledGVMatches(data=predGV_PTdf,gvedf=gvedf,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
-#
-## For the not-pre-trained predictions vs GV
-#nptGVmatches<-getModelHurdledGVMatches(data=predGV_NPTdf,gvedf=gvedf,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
-#
-### CAREFUL - now need the code to discern between presences and absences - use the absences for potential FP (only for ROI data, because otherwise we would only have TP and FN)
-#roimdf<-roiTestdf[,c("birdcode","x1","x2","SamplingEvent","vote")]
-#roimdf$secs<-round(roimdf$x2-roimdf$x1)
-#roimdf<-roimdf[,c("birdcode","secs","SamplingEvent","vote")]
-#names(roimdf)<-c("species","secs","SamplingEvent","vote")
-## there are dupes, so...
-#roimdf<-unique(roimdf)
-## For the pre-trained predictions vs ROI data
-#ptROImatches<-getModelHurdledROIMatches(data=predROI_PTdf,roidf=roimdf,hurdvals=seq(0.65,0.99,by=0.01),getROIMatches=getROIMatches)
-#
-## For the notpre-trained predictions vs ROI data
-#nptROImatches<-getModelHurdledROIMatches(data=predROI_NPTdf,roidf=roimdf,hurdvals=seq(0.65,0.99,by=0.01),getROIMatches=getROIMatches)
-#
-## Need the same for the BirdNET data vs GV
-#bnGVmatches<-getModelHurdledGVMatches(data=bngvdf,gvedf=gvedf_bn,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
-#ngbnGVmatches<-getModelHurdledGVMatches(data=ngbngvdf,gvedf=gvedf_bn,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
-#
-#save(ptGVmatches,nptGVmatches,ptROImatches,nptROImatches,bnGVmatches,ngbnGVmatches,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/ROI_GV_allmatches_011423.RData")
+# For the pre-trained predictions vs GV
+ptGVmatches<-getModelHurdledGVMatches(data=predGV_PTdf,gvedf=gvedf,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
+
+# For the not-pre-trained predictions vs GV
+nptGVmatches<-getModelHurdledGVMatches(data=predGV_NPTdf,gvedf=gvedf,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
+
+## CAREFUL - now need the code to discern between presences and absences - use the absences for potential FP (only for ROI data, because otherwise we would only have TP and FN)
+roimdf<-roiTestdf[,c("birdcode","x1","x2","SamplingEvent","vote")]
+roimdf$secs<-round(roimdf$x2-roimdf$x1)
+roimdf<-roimdf[,c("birdcode","secs","SamplingEvent","vote")]
+names(roimdf)<-c("species","secs","SamplingEvent","vote")
+# there are dupes, so...
+roimdf<-unique(roimdf)
+# For the pre-trained predictions vs ROI data
+ptROImatches<-getModelHurdledROIMatches(data=predROI_PTdf,roidf=roimdf,hurdvals=seq(0.65,0.99,by=0.01),getROIMatches=getROIMatches)
+
+# For the notpre-trained predictions vs ROI data
+nptROImatches<-getModelHurdledROIMatches(data=predROI_NPTdf,roidf=roimdf,hurdvals=seq(0.65,0.99,by=0.01),getROIMatches=getROIMatches)
+
+# Need the same for the BirdNET data vs GV
+bnGVmatches<-getModelHurdledGVMatches(data=bngvdf,gvedf=gvedf_bn,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
+ngbnGVmatches<-getModelHurdledGVMatches(data=ngbngvdf,gvedf=gvedf_bn,hurdvals=seq(0.65,0.99,by=0.01),getGVMatches=getGVMatches,removeDoubleGVMatches=removeDoubleGVMatches)
+
+save(ptGVmatches,nptGVmatches,ptROImatches,nptROImatches,bnGVmatches,ngbnGVmatches,file="//prbo.org/Data/Home/Petaluma/lsalas/Documents/lsalas/Mateo/database/ROI_GV_allmatches_011523.RData")
 #############################################
 
 ## END OF DATA PROCESSING

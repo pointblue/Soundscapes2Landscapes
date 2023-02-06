@@ -13,7 +13,7 @@ Supporting code, metadata, dataset and models used for analyses contained in DOI
 - Pretrain ImageNet CNNs using xeno-canto ROIs
 
 #### [CNN_post-processing](CNN_post-processing/)
-- Full code stack used to generate the post-model-fitting logistic corrections and all figures and tables shown in the paper
+- Full code stack used to generate all figures and tables shown in the paper
 - All the datasets used, including data from ARBIMON (.csv files), AirTable (queried into .RData files), and predictions (read from pickle files into .RData files)
 - The entire database of predictions into a mysqldump file. Data can be found at ZENODO DOI TBD.
 - A README file with the logic of the full code stack.
