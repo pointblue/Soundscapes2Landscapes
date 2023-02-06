@@ -27,7 +27,7 @@ source(paste0(pathToLocalGit,"scripts/dataFunctions.R"))
 
 ##############################################################################################################################
 #load the matches
-load(file=paste0(pathToLocalGit,"data/ROI_GV_allmatches_011523.RData"))  #ROI_GV_allmatches_011323.RData contains the nongeoBN and includes non-target species. Do not use.
+load(file=paste0(pathToLocalGit,"data/ROI_GV_allmatches_011523.RData"))  
 
 #Need the following data to attribute the roiTest data...
 afiles<-read.csv(paste0(pathToLocalGit,"data/audiofiles_20221216.csv"),stringsAsFactors=F)
