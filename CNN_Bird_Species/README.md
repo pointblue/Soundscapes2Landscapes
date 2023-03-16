@@ -8,6 +8,8 @@ Sound recordings are available upon request: [Dr. Matthew Clark](matthew.clark@s
 ### Citation
 Please cite the above paper if using these data, code, or models.
 
+These data, code and models in this repository are from the Soundscapes to Landscapes project (soundscapes2landscapes.org), funded by NASA’s Citizen Science for Earth Systems Program (CSESP) 16-CSESP 2016-0009 under cooperative agreement 80NSSC18M0107.
+
 ***
 #### [CNN_melspec_and_inference](CNN_melspec_and_inference/)
 - Generate mel spectrogram representations of (1) ROIs and (2) entire wav recordings.
