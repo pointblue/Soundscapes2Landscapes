@@ -14,33 +14,28 @@
 pathToLocalGit<-"[insert local path here]/" 
 
 suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE))
-pathToLocalGit<-"G:/Shared drives/NASA  S2L/Paper Development/CNN bird species/revision/github/" #Point to your local cloned repository
-
 
 #########################################################################################
 ####    READ ME !!!!
 
 #### Code to process the data for result visualizations
 
-## Below, remarked out, is the code that generates all the results at the bottom
-## It is included here for completeness but the resulting data file is provided
-## So, it is not necessary to re-run it. (Takes time!)
-
-## We've left some code un-remarked because we need it for the result graphs and tables
+## Below is the code that generates all the data used in the script generatePlots.R
 
 ###########################
 # Here we provide the code and data resources to reproduce the input data file used for our results. Specifically...
 # The outputs of this code file (i.e., the output of every "save" statemebt below) are provided and used with the generatePlots.R code file, which reproduces all the graphics and tables in the paper.
+# The code is included here for completeness but the resulting data file is provided in this repository. So, it is not necessary to re-run it. (Takes time!)
 
 # We start with the AI models predictions, for the sake of completeness
 # However, the database of predictions and some of the code files to summarize the predictions are not included in this repository 
-# We mention  where each data file comes from, and if we do not provide the code file, we name it and can provide a copy upon request.
+# We mention where each data file comes from, and if we do not provide the code file, we name it and can provide a copy upon request.
 
-# We need the original pretrained and not pretrained predictions from each model to test against the GV data 
+# We need the original pretrained and not pretrained predictions from each model to test against the soundscape data 
 # The pre-trained predictions are in "predictions_sigmoid_20221216.csv" - Please ask for a copy of this ~2Gb data file until we are ready to post a copy in an open repository 
 # The not-XC-pretrained predictions are obtained with the code file noXCmodels_results.R - we are happy to share a copy of this file upon request, along with the pickle files of predictions it uses
-# We need the ROI performance data, the latest ROI centers file
-# We also need the BirdNet predictions
+# We need the ROI performance data, the latest ROI centers file - available through this repository
+# We also need the BirdNet predictions - available through this repository
 
 #############
 # Load the ROI data - need this first to filter the GV data by training call...
