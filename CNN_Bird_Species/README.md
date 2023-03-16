@@ -1,7 +1,7 @@
 ### CNN_Bird_Species contains code to perform the following tasks associated with the associated peer-reviewed paper: 
 Clark, M.L., Salas, L., Baligar, S., Quinn, C., Snyder, R.L., Leland, D., Schackwitz, W., Goetz, S.J., Newsam, S. (2023). The effect of soundscape composition on bird vocalization classification in a citizen science biodiversity monitoring project. Ecological Informatics. https://doi.org/10.1016/j.ecoinf.2023.102065
 
-Data can be found at Zenodo https://zenodo.org/deposit/6512218 (DOI:0.5281/zenodo.6512218)
+Data can be found at Zenodo https://zenodo.org/record/6512218
 
 Sound recordings are available upon request: [Dr. Matthew Clark](matthew.clark@sonoma.edu)
 
