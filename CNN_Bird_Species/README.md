@@ -1,9 +1,17 @@
-### CNN_Bird_Species contains code to perform the following tasks associated with the associated peer-reviewed paper: 
-Clark, M.L., Salas, L., Baligar, S., Quinn, C., Snyder, R.L., Leland, D., Schackwitz, W., Goetz, S.J., Newsam, S. (2023). The effect of soundscape composition on bird vocalization classification in a citizen science biodiversity monitoring project. Ecological Informatics. https://doi.org/10.1016/j.ecoinf.2023.102065
+### CNN_Bird_Species 
+This folder contains code to perform the following tasks associated with the associated peer-reviewed paper: <br>
+Clark, M.L., Salas, L., Baligar, S., Quinn, C., Snyder, R.L., Leland, D., Schackwitz, W., Goetz, S.J., Newsam, S. (2023). The effect of soundscape composition on bird vocalization classification in a citizen science biodiversity monitoring project. Ecological Informatics. <br>
+https://doi.org/10.1016/j.ecoinf.2023.102065
+<br><br>
 
-Data can be found at Zenodo (https://doi.org/10.5281/zenodo.6512218 (DOI:0.5281/zenodo.6512218)
+Data for analyses in the paper can be found at Zenodo <br>
+https://doi.org/10.5281/zenodo.6512218 (DOI:0.5281/zenodo.6512218) 
+<br><br>
 
-Sound recordings are available upon request: [Dr. Matthew Clark](matthew.clark@sonoma.edu)
+Sound recordings are available here: <br>
+Clark, M., L. Salas, R. Snyder, W. Schackwitz, D. Leland, and T. Erickson. 2024. Soundscapes to Landscapes Acoustic Recordings, Sonoma
+County, CA, 2017-2022. ORNL DAAC, Oak Ridge, Tennessee, USA. <br>
+https://doi.org/10.3334/ORNLDAAC/2341
 
 ### Citation
 Please cite the above paper if using these data, code, or models.
