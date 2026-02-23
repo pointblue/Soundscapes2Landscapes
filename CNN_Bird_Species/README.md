@@ -4,17 +4,17 @@ Clark, M.L., Salas, L., Baligar, S., Quinn, C., Snyder, R.L., Leland, D., Schack
 https://doi.org/10.1016/j.ecoinf.2023.102065
 <br><br>
 
-Data for analyses in the paper can be found at Zenodo <br>
-https://doi.org/10.5281/zenodo.6512218 (DOI:0.5281/zenodo.6512218) 
-<br><br>
-
 Sound recordings are available here: <br>
 Clark, M., L. Salas, R. Snyder, W. Schackwitz, D. Leland, and T. Erickson. 2024. Soundscapes to Landscapes Acoustic Recordings, Sonoma
 County, CA, 2017-2022. ORNL DAAC, Oak Ridge, Tennessee, USA. <br>
 https://doi.org/10.3334/ORNLDAAC/2341
+<br><br>
+
+Data for analyses in the paper can be found at Zenodo <br>
+https://doi.org/10.5281/zenodo.6512218 (DOI:0.5281/zenodo.6512218)
 
 ### Citation
-Please cite the above paper if using these data, code, or models.
+Please cite the above publications if using these data, code, or models.
 
 These data, code and models in this repository are from the Soundscapes to Landscapes project (soundscapes2landscapes.org), funded by NASA’s Citizen Science for Earth Systems Program (CSESP) 16-CSESP 2016-0009 under cooperative agreement 80NSSC18M0107.
 
